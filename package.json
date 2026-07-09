@@ -1,0 +1,19 @@
+{
+  "name": "pet-context-companion",
+  "version": "0.1.0",
+  "description": "A local Windows companion panel for Codex pets, task context, and token usage.",
+  "main": "src/main.js",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "check": "node --check src/codex-data.js && node --check src/main.js && node --check src/preload.js && node --check src/renderer/renderer.js"
+  },
+  "dependencies": {
+    "lucide": "^0.468.0"
+  },
+  "devDependencies": {
+    "electron": "^43.1.0"
+  }
+}
