@@ -5,44 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
     <title>Pet Context Companion</title>
+    <link rel="stylesheet" href="../../node_modules/@fontsource-variable/inter/wght.css" />
     <link rel="stylesheet" href="styles.css" />
     <script defer src="../../node_modules/lucide/dist/umd/lucide.js"></script>
     <script defer src="renderer.js"></script>
   </head>
   <body>
     <main class="companion" aria-live="polite">
-      <span class="thought-dot thought-dot--large" aria-hidden="true"></span>
-      <span class="thought-dot thought-dot--small" aria-hidden="true"></span>
-      <section class="bubble" aria-label="Pet thought bubble">
-        <header class="bubble__header">
-          <span class="thought-label"><i data-lucide="brain-circuit" aria-hidden="true"></i>THINKING</span>
-          <div class="bubble__actions">
-            <button class="icon-button" id="audio-toggle" type="button" title="Enable spoken updates" aria-label="Enable spoken updates">
-              <i data-lucide="volume-x"></i>
-            </button>
-            <button class="icon-button" id="refresh" type="button" title="Refresh task telemetry" aria-label="Refresh task telemetry">
-              <i data-lucide="rotate-cw"></i>
-            </button>
-            <button class="icon-button" id="dismiss" type="button" title="Hide companion" aria-label="Hide companion">
-              <i data-lucide="x"></i>
-            </button>
-          </div>
+      <section id="cloud-stage" class="cloud-stage" aria-label="Repository thought cloud">
+        <i data-lucide="message-circle" class="thought-tail thought-tail--large" aria-hidden="true"></i>
+        <i data-lucide="message-circle" class="thought-tail thought-tail--small" aria-hidden="true"></i>
+        <section id="back-cloud" class="cloud cloud--back" aria-hidden="true"></section>
+        <section id="front-cloud" class="cloud cloud--front" aria-label="Visible repository thoughts"></section>
+      </section>
+
+      <section id="usage-podium" class="usage-podium" aria-label="Codex usage limits">
+        <header class="podium-header">
+          <span>CODEX CAPACITY</span>
+          <span id="plan-label">ACCOUNT</span>
         </header>
-
-        <p id="speech-text" class="task-name">Reading task telemetry...</p>
-
-        <div class="context-line">
-          <span>Context</span>
-          <strong id="context-value">Waiting</strong>
-        </div>
-        <div class="meter"><span id="context-meter"></span></div>
-        <p id="context-detail" class="context-detail">Waiting for a token-count event</p>
-
-        <div class="usage-row">
-          <span id="task-state">Checking task</span>
-          <span id="input-tokens">Input --</span>
-          <span id="output-tokens">Output --</span>
-        </div>
+        <div id="quota-rows" class="quota-rows"></div>
+        <footer class="podium-footer">
+          <span><i data-lucide="bot" aria-hidden="true"></i><strong id="agent-count">0</strong> agents</span>
+          <span><i data-lucide="rotate-ccw" aria-hidden="true"></i><strong id="reset-count">--</strong> resets</span>
+        </footer>
       </section>
     </main>
   </body>

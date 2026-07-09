@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DEFAULT_CONTEXT_HOME = path.join(process.env.USERPROFILE || process.env.HOME || '', '.codex');
-const MAX_SESSION_FILES = 8;
+const MAX_SESSION_FILES = 96;
 const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
 
 function getCodexHome(environment = process.env) {
@@ -204,6 +204,7 @@ function readTaskFromSession(file, sessionIndex, now = Date.now()) {
     id: sessionId || file.filePath,
     title,
     workspace,
+    workspacePath: metadata.cwd || null,
     updatedAt: file.stat.mtimeMs,
     status: now - file.stat.mtimeMs < ACTIVE_WINDOW_MS ? 'working' : 'idle',
     context: {
@@ -238,16 +239,42 @@ function readPetState(codexHome) {
   }
 }
 
-function getOverview({ codexHome = getCodexHome(), now = Date.now(), limit = 3 } = {}) {
+function selectLatestWorkspaces(files, limit) {
+  const selected = [];
+  const seenWorkspaces = new Set();
+
+  for (const file of files) {
+    const metadata = readSessionMeta(file.filePath);
+    const workspaceKey = metadata.cwd || metadata.id || findSessionId(file.filePath) || file.filePath;
+    if (seenWorkspaces.has(workspaceKey)) {
+      continue;
+    }
+
+    seenWorkspaces.add(workspaceKey);
+    selected.push(file);
+    if (selected.length === limit) {
+      break;
+    }
+  }
+
+  return selected;
+}
+
+function getOverview({ codexHome = getCodexHome(), now = Date.now(), limit = 6 } = {}) {
   const sessionIndex = readSessionIndex(codexHome);
-  const tasks = listSessionFiles(path.join(codexHome, 'sessions'))
+  const tasks = selectLatestWorkspaces(
+    listSessionFiles(path.join(codexHome, 'sessions')),
+    limit,
+  )
     .map((file) => readTaskFromSession(file, sessionIndex, now))
-    .sort((left, right) => right.updatedAt - left.updatedAt)
-    .slice(0, limit);
+    .sort((left, right) => right.updatedAt - left.updatedAt);
 
   return {
     generatedAt: now,
     pet: readPetState(codexHome),
+    agents: {
+      active: tasks.filter((task) => task.status === 'working').length,
+    },
     tasks,
   };
 }
@@ -260,4 +287,5 @@ module.exports = {
   parseJsonLines,
   readSessionIndex,
   readTaskFromSession,
+  selectLatestWorkspaces,
 };

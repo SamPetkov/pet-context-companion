@@ -8,5 +8,8 @@ contextBridge.exposeInMainWorld('petCompanion', {
     ipcRenderer.on('companion:overview', handler);
     return () => ipcRenderer.removeListener('companion:overview', handler);
   },
+  onVoiceToggle: (listener) => {
+    ipcRenderer.on('companion:voice-toggle', listener);
+    return () => ipcRenderer.removeListener('companion:voice-toggle', listener);
+  },
 });
-

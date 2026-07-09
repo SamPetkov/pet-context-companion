@@ -2,35 +2,77 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
 const { getOverview } = require('./codex-data');
+const { RateLimitService } = require('./rate-limits');
 
 let overlayWindow = null;
 let updateTimer = null;
+let lastAnchorKey = null;
+const rateLimitService = new RateLimitService();
+const OVERLAY_SIZE = { width: 860, height: 640 };
 
-function positionOverlay(window) {
-  const overview = getOverview();
-  const anchor = overview.pet?.anchor;
-  const display = screen.getDisplayNearestPoint(anchor || screen.getCursorScreenPoint());
-  const { workArea } = display;
-  const bounds = window.getBounds();
-  const maxX = workArea.x + workArea.width - bounds.width - 10;
-  const maxY = workArea.y + workArea.height - bounds.height - 10;
-
-  if (anchor) {
-    const x = Math.max(workArea.x + 10, Math.min(maxX, anchor.x - bounds.width - 14));
-    const y = Math.max(workArea.y + 10, Math.min(maxY, anchor.y - Math.round(bounds.height / 2)));
-    window.setPosition(x, y);
-    return;
-  }
-
-  window.setPosition(maxX, maxY - 64);
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
 }
 
-function broadcastOverview() {
+function buildOverview() {
+  const overview = getOverview({ limit: 6 });
+  return {
+    ...overview,
+    quotas: rateLimitService.snapshot,
+  };
+}
+
+function positionOverlay(window, overview, force = false) {
+  const anchor = overview.pet?.anchor;
+  const anchorCenter = anchor
+    ? { x: anchor.x + (anchor.width / 2), y: anchor.y + (anchor.height / 2) }
+    : null;
+  const display = screen.getDisplayNearestPoint(anchorCenter || screen.getCursorScreenPoint());
+  const { workArea } = display;
+  const maxX = workArea.x + workArea.width - OVERLAY_SIZE.width - 8;
+  const maxY = workArea.y + workArea.height - OVERLAY_SIZE.height - 8;
+  const cloudSide = anchorCenter && anchorCenter.x - workArea.x > (workArea.x + workArea.width) - anchorCenter.x
+    ? 'left'
+    : 'right';
+  const anchorKey = anchorCenter ? `${anchorCenter.x}:${anchorCenter.y}:${cloudSide}` : 'fallback';
+
+  let x = maxX;
+  let y = maxY - 32;
+  if (anchorCenter) {
+    x = clamp(
+      anchorCenter.x - (cloudSide === 'left' ? 680 : 180),
+      workArea.x + 8,
+      maxX,
+    );
+    y = clamp(anchorCenter.y - 310, workArea.y + 8, maxY);
+  }
+
+  if (force || anchorKey !== lastAnchorKey) {
+    window.setPosition(x, y);
+    lastAnchorKey = anchorKey;
+  }
+
+  return {
+    cloudSide,
+    pet: anchorCenter
+      ? { x: Math.round(anchorCenter.x - x), y: Math.round(anchorCenter.y - y) }
+      : { x: cloudSide === 'left' ? 670 : 190, y: 300 },
+  };
+}
+
+function broadcastOverview(forcePosition = false) {
   if (!overlayWindow || overlayWindow.isDestroyed()) {
     return;
   }
 
-  overlayWindow.webContents.send('companion:overview', getOverview());
+  const overview = buildOverview();
+  overview.layout = positionOverlay(overlayWindow, overview, forcePosition);
+  overlayWindow.webContents.send('companion:overview', overview);
+  rateLimitService.refresh().then((updated) => {
+    if (updated) {
+      broadcastOverview();
+    }
+  });
 }
 
 function captureTestScreenshot() {
@@ -39,6 +81,7 @@ function captureTestScreenshot() {
     return;
   }
 
+  const delay = Number(process.env.PET_COMPANION_SCREENSHOT_DELAY_MS) || 1_200;
   setTimeout(async () => {
     try {
       const image = await overlayWindow.webContents.capturePage();
@@ -49,17 +92,17 @@ function captureTestScreenshot() {
       console.error('Unable to capture companion screenshot:', error);
       app.exit(1);
     }
-  }, 900);
+  }, delay);
 }
 
 function createOverlay() {
   overlayWindow = new BrowserWindow({
-    width: 356,
-    height: 230,
-    minWidth: 356,
-    minHeight: 230,
-    maxWidth: 356,
-    maxHeight: 230,
+    width: OVERLAY_SIZE.width,
+    height: OVERLAY_SIZE.height,
+    minWidth: OVERLAY_SIZE.width,
+    minHeight: OVERLAY_SIZE.height,
+    maxWidth: OVERLAY_SIZE.width,
+    maxHeight: OVERLAY_SIZE.height,
     show: false,
     frame: false,
     transparent: true,
@@ -67,6 +110,7 @@ function createOverlay() {
     hasShadow: false,
     skipTaskbar: true,
     resizable: false,
+    focusable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -76,11 +120,11 @@ function createOverlay() {
   });
 
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   overlayWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   overlayWindow.once('ready-to-show', () => {
-    positionOverlay(overlayWindow);
     overlayWindow.showInactive();
-    broadcastOverview();
+    broadcastOverview(true);
     captureTestScreenshot();
   });
   overlayWindow.on('closed', () => {
@@ -90,7 +134,7 @@ function createOverlay() {
 
 app.whenReady().then(() => {
   createOverlay();
-  updateTimer = setInterval(broadcastOverview, 8_000);
+  updateTimer = setInterval(() => broadcastOverview(), 8_000);
   globalShortcut.register('CommandOrControl+Shift+P', () => {
     if (!overlayWindow) {
       createOverlay();
@@ -100,12 +144,19 @@ app.whenReady().then(() => {
       overlayWindow.hide();
     } else {
       overlayWindow.showInactive();
-      broadcastOverview();
+      broadcastOverview(true);
     }
+  });
+  globalShortcut.register('CommandOrControl+Shift+V', () => {
+    overlayWindow?.webContents.send('companion:voice-toggle');
   });
 });
 
-ipcMain.handle('companion:overview', () => getOverview());
+ipcMain.handle('companion:overview', () => {
+  const overview = buildOverview();
+  overview.layout = overlayWindow ? positionOverlay(overlayWindow, overview) : null;
+  return overview;
+});
 ipcMain.handle('companion:hide', () => overlayWindow?.hide());
 
 app.on('window-all-closed', () => {

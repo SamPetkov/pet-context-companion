@@ -1,16 +1,18 @@
 # Pet Context Companion
 
-Pet Context Companion is a local cross-platform thought bubble for the OpenAI Codex desktop pet. It attaches itself to the left of the native pet when Codex exposes its current anchor, then shows the active task's context-window pressure and token totals. It can also speak short status updates using the operating system's installed voices.
+Pet Context Companion is a local cross-platform thought-cloud overlay for the OpenAI Codex desktop pet. It attaches itself near the native pet when Codex exposes its current anchor, cycles through recent repositories, and shows task context, subscription usage, and active-agent status. It can also speak short status briefings using the operating system's installed voices.
 
 It is an independent community project and is not affiliated with or endorsed by OpenAI.
 
 ## What it shows
 
-- The current Codex task, with its local task name.
-- Current context-window usage: `used tokens / model context window` and percentage.
-- Cumulative input and output tokens for the active task.
-- A working or idle state based on recent local session activity.
-- An optional spoken update.
+- Up to six distinct recent Codex workspaces, grouped so repeated threads from one repository do not crowd out the rest.
+- A two-layer thought-cloud carousel that automatically cycles through all visible repositories.
+- Current context-window usage: `used tokens / model context window` and percentage for each visible workspace.
+- Cumulative input and output tokens, plus a working or idle state for each workspace.
+- A usage podium with the current 5-hour and weekly ChatGPT Codex windows, reset times, and earned reset-credit count when the account exposes them.
+- The number of active local Codex agents, counted from recent working workspaces.
+- Optional voice briefings, toggled with `Ctrl+Shift+V` (`Cmd+Shift+V` on macOS).
 
 The panel reads the local Codex JSONL session files. It does not send telemetry, source code, prompts, or chat messages over the network.
 
@@ -29,9 +31,9 @@ npm install
 npm start
 ```
 
-Open or wake your Codex pet first, then launch the companion. The native pet remains untouched. On Codex installations that expose the pet anchor in local state, the bubble is placed immediately to its left. Otherwise it appears near the lower-right of the active display. Drag the bubble to fine-tune its placement.
+Open or wake your Codex pet first, then launch the companion. The native pet remains untouched. On Codex installations that expose the pet anchor in local state, the cloud and usage podium are placed around it. Otherwise they appear near the lower-right of the active display.
 
-Use `Ctrl+Shift+P` to show or hide the panel. The speaker button enables spoken updates. The refresh button reloads local session telemetry immediately.
+Use `Ctrl+Shift+P` to show or hide the overlay. Use `Ctrl+Shift+V` to enable or disable voice briefings.
 
 ## Data and privacy
 
@@ -41,7 +43,7 @@ Codex writes session metadata and token telemetry to `%USERPROFILE%\.codex`. The
 - `model_context_window` and latest `last_token_usage`.
 - Aggregate `total_token_usage` input/output counts.
 
-It deliberately does not read or render user prompts, assistant text, tool output, repository file contents, authentication data, or API keys. The fields are read locally and never leave your computer.
+For the optional 5-hour/week podium, the companion asks the local Codex app-server for the documented `account/rateLimits/read` snapshot. It receives only subscription-window percentages, reset timestamps, and reset-credit availability. It deliberately does not read or render user prompts, assistant text, tool output, repository file contents, authentication data, or API keys. The fields are read locally and never leave your computer.
 
 ## Current scope
 

@@ -6,6 +6,8 @@ const test = require('node:test');
 const { getOverview, parseJsonLines } = require('../src/codex-data');
 
 const SESSION_ID = '11111111-2222-3333-4444-555555555555';
+const DUPLICATE_SESSION_ID = '66666666-7777-8888-9999-aaaaaaaaaaaa';
+const OTHER_SESSION_ID = 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff';
 
 function writeFixture(root) {
   const sessionDirectory = path.join(root, 'sessions', '2026', '07', '10');
@@ -54,4 +56,33 @@ test('getOverview derives task context and total token usage from local telemetr
   assert.equal(overview.tasks[0].context.percent, 25);
   assert.equal(overview.tasks[0].tokens.input, 140000);
   assert.equal(overview.tasks[0].tokens.output, 9000);
+});
+
+test('getOverview keeps the latest task for each workspace', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pet-companion-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  writeFixture(root);
+  const sessionDirectory = path.join(root, 'sessions', '2026', '07', '10');
+  const indexPath = path.join(root, 'session_index.jsonl');
+  const now = Date.now();
+
+  const addSession = (id, threadName, cwd, modifiedAt) => {
+    fs.appendFileSync(indexPath, `${JSON.stringify({ id, thread_name: threadName, updated_at: new Date(modifiedAt).toISOString() })}\n`);
+    const filePath = path.join(sessionDirectory, `rollout-2026-07-10T00-00-00-${id}.jsonl`);
+    fs.writeFileSync(filePath, [
+      JSON.stringify({ type: 'session_meta', payload: { id, cwd } }),
+      JSON.stringify({ type: 'event_msg', payload: { info: { model_context_window: 1000, last_token_usage: { total_tokens: 500 } } } }),
+    ].join('\n'));
+    fs.utimesSync(filePath, new Date(modifiedAt), new Date(modifiedAt));
+  };
+
+  addSession(DUPLICATE_SESSION_ID, 'Newest pet companion thread', 'C:\\work\\pet-companion', now + 1_000);
+  addSession(OTHER_SESSION_ID, 'Other repository thread', 'C:\\work\\other-repository', now);
+
+  const overview = getOverview({ codexHome: root, now, limit: 6 });
+
+  assert.equal(overview.tasks.length, 2);
+  assert.deepEqual(overview.tasks.map((task) => task.workspace), ['pet-companion', 'other-repository']);
+  assert.equal(overview.tasks[0].title, 'Newest pet companion thread');
+  assert.equal(overview.agents.active, 2);
 });
