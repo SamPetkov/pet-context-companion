@@ -63,7 +63,7 @@ function cloudMarkup(tasks, page, total) {
     const contextClass = task.context.percent === null ? 'repo-context--unknown' : '';
     const repo = task.workspace || task.title;
     return `
-      <article class="repo-row">
+      <button type="button" class="repo-row task-link" data-task-id="${escapeHtml(task.id)}" aria-label="Open ${escapeHtml(task.title)} in Codex">
         <span class="repo-name" title="${escapeHtml(repo)}">${escapeHtml(repo)}</span>
         <span class="repo-context ${contextClass}">${context}</span>
         <span class="repo-task" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</span>
@@ -72,12 +72,12 @@ function cloudMarkup(tasks, page, total) {
           <span>${formatTokens(task.context.used)} / ${formatTokens(task.context.window)}</span>
           <span>In ${formatTokens(task.tokens.input)} Out ${formatTokens(task.tokens.output)}</span>
         </div>
-      </article>
+      </button>
     `;
   }).join('');
 
   return `
-    <div class="cloud-eyebrow"><span>THOUGHTS</span><span>${page * PAGE_SIZE + 1}-${Math.min((page + 1) * PAGE_SIZE, total)} / ${total}</span></div>
+    <div class="cloud-eyebrow"><span>TASKS</span><span>${page * PAGE_SIZE + 1}-${Math.min((page + 1) * PAGE_SIZE, total)} / ${total}</span></div>
     <div class="repo-list">${rows}</div>
   `;
 }
@@ -92,7 +92,7 @@ function gridMarkup(tasks) {
     const contextClass = task.context.percent === null ? 'repo-context--unknown' : '';
     const repo = task.workspace || task.title;
     return `
-      <article class="repo-row">
+      <button type="button" class="repo-row task-link" data-task-id="${escapeHtml(task.id)}" aria-label="Open ${escapeHtml(task.title)} in Codex">
         <span class="repo-name" title="${escapeHtml(repo)}">${escapeHtml(repo)}</span>
         <span class="repo-context ${contextClass}">${context}</span>
         <span class="repo-task" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</span>
@@ -101,7 +101,7 @@ function gridMarkup(tasks) {
           <span>${formatTokens(task.context.used)} / ${formatTokens(task.context.window)}</span>
           <span>In ${formatTokens(task.tokens.input)} Out ${formatTokens(task.tokens.output)}</span>
         </div>
-      </article>
+      </button>
     `;
   }).join('');
 
@@ -316,6 +316,19 @@ viewToggle.addEventListener('mouseleave', () => {
     window.petCompanion.setIgnoreMouseEvents(true);
   }
 });
+
+function openTaskFromPanel(event) {
+  const task = event.target.closest('.task-link[data-task-id]');
+  if (task && window.petCompanion.openTask) {
+    window.petCompanion.openTask(task.dataset.taskId);
+  }
+}
+
+for (const panel of [cloudStage, gridStage]) {
+  panel.addEventListener('mouseenter', () => window.petCompanion.setIgnoreMouseEvents?.(false));
+  panel.addEventListener('mouseleave', () => window.petCompanion.setIgnoreMouseEvents?.(true));
+  panel.addEventListener('click', openTaskFromPanel);
+}
 
 window.petCompanion.onOverview(updateOverview);
 window.petCompanion.onRestore(() => setViewMode('cloud'));

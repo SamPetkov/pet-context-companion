@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, screen, shell } = require('electron');
 const {
   getCodexHome,
   getOverview,
@@ -280,6 +280,12 @@ ipcMain.handle('companion:overview', () => {
   return overview;
 });
 ipcMain.handle('companion:hide', () => overlayWindow?.hide());
+ipcMain.handle('companion:open-task', (_event, threadId) => {
+  if (typeof threadId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(threadId)) {
+    return false;
+  }
+  return shell.openExternal(`codex://threads/${encodeURIComponent(threadId)}`).then(() => true);
+});
 ipcMain.on('companion:set-ignore-mouse-events', (event, ignore) => {
   if (typeof ignore !== 'boolean') {
     return;

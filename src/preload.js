@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('petCompanion', {
   getOverview: () => ipcRenderer.invoke('companion:overview'),
   hide: () => ipcRenderer.invoke('companion:hide'),
+  openTask: (threadId) => ipcRenderer.invoke('companion:open-task', threadId),
   setIgnoreMouseEvents: (ignore) => ipcRenderer.send('companion:set-ignore-mouse-events', ignore),
   onOverview: (listener) => {
     const handler = (_event, overview) => listener(overview);

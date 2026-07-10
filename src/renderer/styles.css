@@ -152,6 +152,25 @@ button {
   background: rgba(255, 255, 255, 0.54);
 }
 
+.task-link {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.task-link:hover {
+  border-color: rgba(214, 100, 149, 0.38);
+  background: rgba(255, 255, 255, 0.76);
+  transform: translateY(-1px);
+}
+
+.task-link:focus-visible {
+  outline: 2px solid rgba(95, 155, 221, 0.78);
+  outline-offset: 2px;
+}
+
 .repo-name,
 .repo-task {
   min-width: 0;
