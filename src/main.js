@@ -83,34 +83,18 @@ function positionOverlay(window, overview, force = false) {
   const cloudSide = anchorCenter && anchorCenter.x - workArea.x > (workArea.x + workArea.width) - anchorCenter.x
     ? 'left'
     : 'right';
-  const localPet = { x: cloudSide === 'left' ? 670 : 190, y: 300 };
+  const targetPet = { x: cloudSide === 'left' ? 670 : 190, y: 300 };
   const anchorKey = anchorCenter ? `${anchorCenter.x}:${anchorCenter.y}:${cloudSide}` : 'fallback';
 
   let x = maxX;
   let y = maxY - 32;
-  const useHighDpiSafePlacement = process.platform === 'win32' && display.scaleFactor > 1;
-  if (useHighDpiSafePlacement) {
-    const source = overview.pet?.displayBounds;
-    const anchor = overview.pet?.anchor;
-    const progressX = source && anchor
-      ? clamp((anchor.x + (anchor.width / 2) - source.x) / source.width, 0, 1)
-      : 0.5;
-    const progressY = source && anchor
-      ? clamp((anchor.y + (anchor.height / 2) - source.y) / source.height, 0, 1)
-      : 0.5;
-    const safeMinX = workArea.x + 8;
-    const safeMinY = workArea.y + 8;
-    const safeMaxX = workArea.x + Math.round(workArea.width * 0.16);
-    const safeMaxY = workArea.y + Math.round(workArea.height * 0.075);
-    x = Math.round(safeMinX + ((safeMaxX - safeMinX) * progressX));
-    y = Math.round(safeMinY + ((safeMaxY - safeMinY) * progressY));
-  } else if (anchorCenter) {
+  if (anchorCenter) {
     x = clamp(
-      anchorCenter.x - localPet.x,
+      anchorCenter.x - targetPet.x,
       workArea.x + 8,
       maxX,
     );
-    y = clamp(anchorCenter.y - localPet.y, workArea.y + 8, maxY);
+    y = clamp(anchorCenter.y - targetPet.y, workArea.y + 8, maxY);
   }
 
   if (force || anchorKey !== lastAnchorKey) {
@@ -120,7 +104,9 @@ function positionOverlay(window, overview, force = false) {
 
   return {
     cloudSide,
-    pet: localPet,
+    pet: anchorCenter
+      ? { x: Math.round(anchorCenter.x - x), y: Math.round(anchorCenter.y - y) }
+      : targetPet,
   };
 }
 
