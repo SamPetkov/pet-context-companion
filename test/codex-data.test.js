@@ -80,7 +80,7 @@ test('mapPetAnchorToDisplay converts physical pet coordinates to Electron displa
   );
 });
 
-test('getOverview keeps the latest task for each workspace', (t) => {
+test('getOverview keeps concurrently active threads visible', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pet-companion-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   writeFixture(root);
@@ -103,8 +103,12 @@ test('getOverview keeps the latest task for each workspace', (t) => {
 
   const overview = getOverview({ codexHome: root, now, limit: 6 });
 
-  assert.equal(overview.tasks.length, 2);
-  assert.deepEqual(overview.tasks.map((task) => task.workspace), ['pet-companion', 'other-repository']);
+  assert.equal(overview.tasks.length, 3);
+  assert.deepEqual(new Set(overview.tasks.map((task) => task.title)), new Set([
+    'Newest pet companion thread',
+    'Other repository thread',
+    'Build task context overlay',
+  ]));
   assert.equal(overview.tasks[0].title, 'Newest pet companion thread');
-  assert.equal(overview.agents.active, 2);
+  assert.equal(overview.agents.active, 3);
 });

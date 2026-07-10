@@ -186,7 +186,7 @@ function captureTestScreenshot() {
         await overlayWindow.webContents.executeJavaScript("document.querySelector('#view-toggle')?.click()");
       }
       if (screenshotView === 'grid' || screenshotView === 'minimized') {
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 480));
       }
       const image = await overlayWindow.webContents.capturePage();
       await fs.promises.mkdir(path.dirname(destination), { recursive: true });

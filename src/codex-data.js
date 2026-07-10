@@ -174,6 +174,12 @@ function readSessionMeta(filePath) {
     metadata.id = typeof payload.id === 'string' ? payload.id : metadata.id;
     metadata.cwd = typeof payload.cwd === 'string' ? payload.cwd : metadata.cwd;
     metadata.threadName = typeof payload.thread_name === 'string' ? payload.thread_name : metadata.threadName;
+    const subagent = payload.source?.subagent?.thread_spawn;
+    if (subagent) {
+      metadata.agentName = typeof subagent.agent_nickname === 'string' ? subagent.agent_nickname : metadata.agentName;
+      metadata.parentThreadId = typeof subagent.parent_thread_id === 'string' ? subagent.parent_thread_id : metadata.parentThreadId;
+      metadata.isSubagent = true;
+    }
   }
 
   return metadata;
@@ -209,16 +215,24 @@ function readTaskFromSession(file, sessionIndex, now = Date.now()) {
     inputTokens: null,
     outputTokens: null,
   };
+  let completed = false;
 
   for (const record of parseJsonLines(readTail(file.filePath))) {
     visitObjects(record, (candidate) => updateTelemetry(telemetry, candidate));
+    const payloadType = record.payload?.type;
+    if (record.type === 'event_msg' && payloadType === 'task_complete') {
+      completed = true;
+    } else if (record.type === 'response_item' && ['reasoning', 'custom_tool_call', 'message'].includes(payloadType)) {
+      completed = false;
+    }
   }
 
   const workspace = workspaceName(metadata.cwd);
   const contextPercent = telemetry.contextWindow && telemetry.contextUsed !== null
     ? Math.max(0, Math.min(100, Math.round((telemetry.contextUsed / telemetry.contextWindow) * 100)))
     : null;
-  const title = indexEntry?.threadName || metadata.threadName || workspace || `Task ${sessionId?.slice(-6) || 'unknown'}`;
+  const title = metadata.agentName || indexEntry?.threadName || metadata.threadName || workspace || `Task ${sessionId?.slice(-6) || 'unknown'}`;
+  const recentlyUpdated = now - file.stat.mtimeMs < ACTIVE_WINDOW_MS;
 
   return {
     id: sessionId || file.filePath,
@@ -226,7 +240,10 @@ function readTaskFromSession(file, sessionIndex, now = Date.now()) {
     workspace,
     workspacePath: metadata.cwd || null,
     updatedAt: file.stat.mtimeMs,
-    status: now - file.stat.mtimeMs < ACTIVE_WINDOW_MS ? 'working' : 'idle',
+    status: recentlyUpdated && !completed ? 'working' : 'idle',
+    isSubagent: metadata.isSubagent === true,
+    agentName: metadata.agentName || null,
+    parentThreadId: metadata.parentThreadId || null,
     context: {
       used: telemetry.contextUsed,
       window: telemetry.contextWindow,
@@ -237,6 +254,41 @@ function readTaskFromSession(file, sessionIndex, now = Date.now()) {
       output: telemetry.outputTokens,
     },
   };
+}
+
+function selectVisibleSessions(files, sessionIndex, now, limit, currentThreadId = null) {
+  const candidates = files
+    .slice(0, Math.max(24, limit * 4))
+    .map((file) => readTaskFromSession(file, sessionIndex, now));
+  const activePrimary = candidates.filter((task) => task.status === 'working' && !task.isSubagent);
+  const activeSubagents = candidates.filter((task) => task.status === 'working' && task.isSubagent);
+  const selected = (activePrimary.length ? activePrimary : activeSubagents).slice(0, limit);
+  const selectedIds = new Set(selected.map((task) => task.id));
+  const representedWorkspaces = new Set(selected.map((task) => workspaceKey(task.workspacePath)));
+
+  if (!selected.length) {
+    for (const task of candidates) {
+      if (selected.length === limit) {
+        break;
+      }
+      const workspace = workspaceKey(task.workspacePath);
+      if (selectedIds.has(task.id) || (workspace && representedWorkspaces.has(workspace))) {
+        continue;
+      }
+      selected.push(task);
+      selectedIds.add(task.id);
+      if (workspace) {
+        representedWorkspaces.add(workspace);
+      }
+    }
+  }
+
+  const currentTask = selected.find((task) => task.id === currentThreadId)
+    || selected.find((task) => task.status === 'working' && !task.isSubagent);
+  if (currentTask) {
+    currentTask.current = true;
+  }
+  return selected;
 }
 
 function readPetState(codexHome) {
@@ -321,14 +373,20 @@ function selectLatestWorkspaces(files, limit) {
   return selected;
 }
 
-function getOverview({ codexHome = getCodexHome(), now = Date.now(), limit = 6 } = {}) {
+function getOverview({
+  codexHome = getCodexHome(),
+  now = Date.now(),
+  limit = 6,
+  currentThreadId = process.env.CODEX_THREAD_ID || null,
+} = {}) {
   const sessionIndex = readSessionIndex(codexHome);
-  const tasks = selectLatestWorkspaces(
+  const tasks = selectVisibleSessions(
     listSessionFiles(path.join(codexHome, 'sessions')),
+    sessionIndex,
+    now,
     limit,
-  )
-    .map((file) => readTaskFromSession(file, sessionIndex, now))
-    .sort((left, right) => right.updatedAt - left.updatedAt);
+    currentThreadId,
+  );
 
   return {
     generatedAt: now,
@@ -350,6 +408,7 @@ module.exports = {
   readPetState,
   readSessionIndex,
   readTaskFromSession,
+  selectVisibleSessions,
   selectLatestWorkspaces,
   workspaceKey,
   workspaceName,

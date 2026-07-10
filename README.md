@@ -20,6 +20,12 @@ It is an independent community project and is not affiliated with or endorsed by
 
 The panel reads the local Codex JSONL session files. It does not send telemetry, source code, prompts, or chat messages over the network.
 
+## Layouts
+
+| Cycling thoughts | All active workspaces |
+| --- | --- |
+| ![Cycling pink thought-cloud layout](docs/images/layout-thoughts.png) | ![Expanded all-workspaces layout](docs/images/layout-all-workspaces.png) |
+
 ## Install as a Codex plugin
 
 The easiest installation is through the repo's Codex plugin marketplace:

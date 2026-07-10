@@ -68,7 +68,7 @@ function cloudMarkup(tasks, page, total) {
         <span class="repo-context ${contextClass}">${context}</span>
         <span class="repo-task" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</span>
         <div class="repo-meta">
-          <strong>${task.status === 'working' ? 'Working' : 'Idle'}</strong>
+          <strong>${task.current ? 'Current' : task.status === 'working' ? 'Working' : 'Idle'}</strong>
           <span>${formatTokens(task.context.used)} / ${formatTokens(task.context.window)}</span>
           <span>In ${formatTokens(task.tokens.input)} Out ${formatTokens(task.tokens.output)}</span>
         </div>
@@ -97,7 +97,7 @@ function gridMarkup(tasks) {
         <span class="repo-context ${contextClass}">${context}</span>
         <span class="repo-task" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</span>
         <div class="repo-meta">
-          <strong>${task.status === 'working' ? 'Working' : 'Idle'}</strong>
+          <strong>${task.current ? 'Current' : task.status === 'working' ? 'Working' : 'Idle'}</strong>
           <span>${formatTokens(task.context.used)} / ${formatTokens(task.context.window)}</span>
           <span>In ${formatTokens(task.tokens.input)} Out ${formatTokens(task.tokens.output)}</span>
         </div>
@@ -173,12 +173,10 @@ function positionClouds(layout) {
   const stageY = Math.max(12, Math.min(window.innerHeight - 345, pet.y - 238));
   const podiumX = Math.max(12, Math.min(window.innerWidth - 332, pet.x - 160));
   const gridX = side === 'left'
-    ? Math.max(12, Math.min(window.innerWidth - 572, pet.x - 650))
-    : Math.max(12, Math.min(window.innerWidth - 572, pet.x + 54));
-  const gridY = Math.max(12, Math.min(window.innerHeight - 420, pet.y - 236));
-  const podiumY = state.viewMode === 'grid'
-    ? Math.max(gridY + 380, Math.min(window.innerHeight - 170, pet.y + 74))
-    : Math.max(360, Math.min(window.innerHeight - 170, pet.y + 74));
+    ? Math.max(12, Math.min(window.innerWidth - 512, pet.x - 650))
+    : Math.max(12, Math.min(window.innerWidth - 512, pet.x + 54));
+  const gridY = 12;
+  const podiumY = Math.max(360, Math.min(window.innerHeight - 170, pet.y + 74));
 
   cloudStage.style.left = `${Math.round(stageX)}px`;
   cloudStage.style.top = `${Math.round(stageY)}px`;
@@ -281,6 +279,9 @@ function setViewMode(viewMode) {
   viewToggle.setAttribute('aria-pressed', String(expanded));
   viewToggle.setAttribute('aria-label', minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces');
   viewToggle.title = minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces';
+  viewToggle.classList.remove('is-bouncing');
+  requestAnimationFrame(() => viewToggle.classList.add('is-bouncing'));
+  setTimeout(() => viewToggle.classList.remove('is-bouncing'), 420);
   render();
 }
 
