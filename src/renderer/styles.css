@@ -3,15 +3,15 @@
   font-family: "Inter Variable", Inter, "Segoe UI Variable", sans-serif;
   font-size: 14px;
   letter-spacing: 0;
-  --glass-bg: rgba(248, 251, 249, 0.76);
-  --glass-bg-soft: rgba(248, 251, 249, 0.48);
+  --glass-bg: rgba(252, 246, 251, 0.78);
+  --glass-bg-soft: rgba(231, 244, 255, 0.54);
   --glass-line: rgba(255, 255, 255, 0.9);
-  --glass-line-soft: rgba(29, 45, 38, 0.14);
-  --ink: #14201b;
-  --ink-muted: rgba(30, 47, 40, 0.64);
-  --mint: #258663;
-  --amber: #a9631c;
-  --danger: #bd4f42;
+  --glass-line-soft: rgba(86, 117, 160, 0.18);
+  --ink: #24304d;
+  --ink-muted: rgba(58, 72, 111, 0.68);
+  --blue: #5f9bdd;
+  --pink: #d66495;
+  --pink-deep: #bd4d80;
 }
 
 * {
@@ -54,7 +54,7 @@ button {
 .lightbulb-btn {
   border: 1px solid var(--glass-line);
   background: var(--glass-bg);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78), 0 18px 46px rgba(20, 31, 26, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 18px 46px rgba(91, 122, 170, 0.16), 12px 12px 34px rgba(214, 100, 149, 0.1);
   backdrop-filter: blur(24px) saturate(128%);
   -webkit-backdrop-filter: blur(24px) saturate(128%);
 }
@@ -64,7 +64,7 @@ button {
   width: 358px;
   min-height: 230px;
   padding: 22px 22px 18px;
-  border-radius: 8px;
+  border-radius: 42px 54px 40px 52px;
   color: var(--ink);
 }
 
@@ -72,6 +72,7 @@ button {
   z-index: 2;
   top: 70px;
   left: 0;
+  background: rgba(255, 231, 243, 0.82);
 }
 
 .cloud--back {
@@ -79,8 +80,8 @@ button {
   top: 30px;
   left: 30px;
   min-height: 206px;
-  border-color: var(--glass-line-soft);
-  background: var(--glass-bg-soft);
+  border-color: rgba(174, 207, 242, 0.42);
+  background: rgba(226, 241, 255, 0.62);
   transform: scale(0.95);
   transform-origin: center;
   opacity: 0.48;
@@ -142,8 +143,8 @@ button {
   min-width: 0;
   padding: 8px 9px;
   border: 1px solid var(--glass-line-soft);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px 12px 14px 11px;
+  background: rgba(255, 255, 255, 0.54);
 }
 
 .repo-name,
@@ -168,7 +169,7 @@ button {
 
 .repo-context {
   align-self: center;
-  color: var(--amber);
+  color: var(--pink-deep);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 740;
@@ -189,7 +190,7 @@ button {
 }
 
 .repo-meta strong {
-  color: var(--mint);
+  color: var(--blue);
   font-weight: 720;
 }
 
@@ -204,8 +205,8 @@ button {
   position: absolute;
   z-index: 3;
   color: rgba(255, 255, 255, 0.95);
-  fill: rgba(248, 251, 249, 0.78);
-  filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.24));
+  fill: rgba(232, 244, 255, 0.82);
+  filter: drop-shadow(0 5px 12px rgba(87, 115, 163, 0.24));
   stroke-width: 1.4;
 }
 
@@ -244,7 +245,8 @@ button {
   width: 320px;
   min-height: 160px;
   padding: 15px 16px 13px;
-  border-radius: 8px;
+  border-radius: 26px 34px 24px 30px;
+  background: rgba(238, 247, 255, 0.8);
 }
 
 .podium-header {
@@ -279,7 +281,7 @@ button {
   height: 6px;
   overflow: hidden;
   border-radius: 3px;
-  background: rgba(28, 44, 37, 0.14);
+  background: rgba(77, 111, 157, 0.14);
 }
 
 .quota-fill {
@@ -287,15 +289,15 @@ button {
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: var(--mint);
+  background: var(--blue);
 }
 
 .quota-fill--watch {
-  background: var(--amber);
+  background: var(--pink);
 }
 
 .quota-fill--high {
-  background: var(--danger);
+  background: var(--pink-deep);
 }
 
 .quota-percent {
@@ -355,16 +357,35 @@ button {
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
+.dream-sparkle {
+  position: absolute;
+  z-index: 9;
+  color: rgba(214, 100, 149, 0.82);
+  filter: drop-shadow(0 3px 8px rgba(214, 100, 149, 0.24));
+  pointer-events: none;
+}
+
+.dream-sparkle--one {
+  width: 14px;
+  height: 14px;
+}
+
+.dream-sparkle--two {
+  width: 10px;
+  height: 10px;
+  color: rgba(95, 155, 221, 0.9);
+}
+
 .lightbulb-btn:hover,
 .lightbulb-btn[aria-pressed="true"] {
-  border-color: rgba(169, 99, 28, 0.5);
-  background: rgba(255, 242, 218, 0.86);
-  color: #8a4e12;
+  border-color: rgba(214, 100, 149, 0.58);
+  background: rgba(255, 225, 239, 0.9);
+  color: var(--pink-deep);
   transform: translateY(-1px);
 }
 
 .lightbulb-btn:focus-visible {
-  outline: 2px solid rgba(255, 217, 149, 0.9);
+  outline: 2px solid rgba(142, 196, 246, 0.95);
   outline-offset: 2px;
 }
 
@@ -378,10 +399,11 @@ button {
   position: absolute;
   z-index: 5;
   width: 560px;
-  max-height: 400px;
+  max-height: 360px;
   padding: 20px;
   overflow-y: auto;
-  border-radius: 8px;
+  border-radius: 30px 38px 28px 34px;
+  background: rgba(242, 248, 255, 0.8);
 }
 
 .grid-stage[hidden] {

@@ -8,6 +8,8 @@ const quotaRows = document.querySelector('#quota-rows');
 const agentCount = document.querySelector('#agent-count');
 const resetCount = document.querySelector('#reset-count');
 const planLabel = document.querySelector('#plan-label');
+const dreamSparkleOne = document.querySelector('.dream-sparkle--one');
+const dreamSparkleTwo = document.querySelector('.dream-sparkle--two');
 
 const PAGE_SIZE = 3;
 const ROTATE_MS = 6_500;
@@ -169,11 +171,13 @@ function positionClouds(layout) {
     : Math.min(window.innerWidth - 410, pet.x + 42);
   const stageY = Math.max(12, Math.min(window.innerHeight - 345, pet.y - 238));
   const podiumX = Math.max(12, Math.min(window.innerWidth - 332, pet.x - 160));
-  const podiumY = Math.max(360, Math.min(window.innerHeight - 170, pet.y + 74));
   const gridX = side === 'left'
     ? Math.max(12, Math.min(window.innerWidth - 572, pet.x - 650))
     : Math.max(12, Math.min(window.innerWidth - 572, pet.x + 54));
   const gridY = Math.max(12, Math.min(window.innerHeight - 420, pet.y - 236));
+  const podiumY = state.viewMode === 'grid'
+    ? Math.max(gridY + 380, Math.min(window.innerHeight - 170, pet.y + 74))
+    : Math.max(360, Math.min(window.innerHeight - 170, pet.y + 74));
 
   cloudStage.style.left = `${Math.round(stageX)}px`;
   cloudStage.style.top = `${Math.round(stageY)}px`;
@@ -185,6 +189,10 @@ function positionClouds(layout) {
 
   viewToggle.style.left = `${Math.round(pet.x + 38)}px`;
   viewToggle.style.top = `${Math.round(pet.y - 48)}px`;
+  dreamSparkleOne.style.left = `${Math.round(pet.x + 70)}px`;
+  dreamSparkleOne.style.top = `${Math.round(pet.y - 58)}px`;
+  dreamSparkleTwo.style.left = `${Math.round(pet.x + 16)}px`;
+  dreamSparkleTwo.style.top = `${Math.round(pet.y - 70)}px`;
 }
 
 function renderPodium(overview) {
