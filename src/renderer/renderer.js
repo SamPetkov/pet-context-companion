@@ -106,7 +106,7 @@ function gridMarkup(tasks) {
   }).join('');
 
   return `
-    <div class="cloud-eyebrow" style="margin-bottom:16px;"><span>ALL WORKSPACES</span><span>${tasks.length} total</span></div>
+    <div class="cloud-eyebrow" style="margin-bottom:16px;"><span>ALL TASKS</span><span>${tasks.length} total</span></div>
     <div class="repo-list">${rows}</div>
   `;
 }
@@ -190,11 +190,11 @@ function positionClouds(layout) {
   gridStage.style.top = `${Math.round(gridY)}px`;
 
   viewToggle.style.left = `${Math.round(pet.x + 38)}px`;
-  viewToggle.style.top = `${Math.round(pet.y - 48)}px`;
+  viewToggle.style.top = `${Math.round(pet.y - 60)}px`;
   dreamSparkleOne.style.left = `${Math.round(pet.x + 70)}px`;
-  dreamSparkleOne.style.top = `${Math.round(pet.y - 58)}px`;
+  dreamSparkleOne.style.top = `${Math.round(pet.y - 70)}px`;
   dreamSparkleTwo.style.left = `${Math.round(pet.x + 16)}px`;
-  dreamSparkleTwo.style.top = `${Math.round(pet.y - 70)}px`;
+  dreamSparkleTwo.style.top = `${Math.round(pet.y - 82)}px`;
 }
 
 function renderPodium(overview) {
@@ -280,8 +280,8 @@ function setViewMode(viewMode) {
   const minimized = viewMode === 'minimized';
   viewToggle.dataset.mode = viewMode;
   viewToggle.setAttribute('aria-pressed', String(expanded));
-  viewToggle.setAttribute('aria-label', minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces');
-  viewToggle.title = minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces';
+  viewToggle.setAttribute('aria-label', minimized ? 'Restore cycling tasks' : expanded ? 'Minimize companion' : 'Show all tasks');
+  viewToggle.title = minimized ? 'Restore cycling tasks' : expanded ? 'Minimize companion' : 'Show all tasks';
   viewToggle.classList.remove('is-bouncing');
   requestAnimationFrame(() => viewToggle.classList.add('is-bouncing'));
   setTimeout(() => viewToggle.classList.remove('is-bouncing'), 420);
