@@ -1,0 +1,37 @@
+{
+  "name": "pet-context-companion",
+  "version": "0.1.0",
+  "description": "Install, launch, update, and troubleshoot the local Codex pet usage overlay.",
+  "author": {
+    "name": "Samuil Petkov",
+    "url": "https://github.com/SamPetkov"
+  },
+  "homepage": "https://github.com/SamPetkov/pet-context-companion#readme",
+  "repository": "https://github.com/SamPetkov/pet-context-companion",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "pet",
+    "context-window",
+    "usage",
+    "desktop-overlay"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Pet Context Companion",
+    "shortDescription": "Install and control the Codex pet usage overlay.",
+    "longDescription": "Installs and launches the local Pet Context Companion overlay, updates it from GitHub, and checks its setup across Windows, macOS, and Linux.",
+    "developerName": "Samuil Petkov",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Start Pet Context Companion beside my Codex pet.",
+      "Update Pet Context Companion and launch it.",
+      "Check my Pet Context Companion installation."
+    ],
+    "brandColor": "#F7FBFF"
+  }
+}

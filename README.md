@@ -17,6 +17,19 @@ It is an independent community project and is not affiliated with or endorsed by
 
 The panel reads the local Codex JSONL session files. It does not send telemetry, source code, prompts, or chat messages over the network.
 
+## Install as a Codex plugin
+
+The easiest installation is through the repo's Codex plugin marketplace:
+
+```powershell
+codex plugin marketplace add SamPetkov/pet-context-companion
+codex plugin add pet-context-companion@pet-context-companion
+```
+
+Start a new Codex task and say `Start Pet Context Companion`. The plugin installs the public app into your user application-data folder and launches it beside the Codex pet. You can later say `Update Pet Context Companion` or `Check my Pet Context Companion installation`.
+
+This is a Codex plugin rather than a ChatGPT App. A ChatGPT App runs through a remote MCP server and sandboxed widget, so it cannot launch this local overlay or read local Codex session files. No OpenAI API key is required.
+
 ## Requirements
 
 - Windows, macOS, or Linux.

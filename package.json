@@ -1,14 +1,14 @@
 {
   "name": "pet-context-companion",
   "version": "0.1.0",
-  "description": "A local Windows companion panel for Codex pets, task context, and token usage.",
+  "description": "A local cross-platform companion panel for Codex pets, task context, and token usage.",
   "main": "src/main.js",
   "license": "MIT",
   "private": false,
   "scripts": {
     "start": "electron .",
     "test": "node --test",
-    "check": "node --check src/codex-data.js && node --check src/main.js && node --check src/preload.js && node --check src/rate-limits.js && node --check src/renderer/renderer.js"
+    "check": "node --check src/codex-data.js && node --check src/main.js && node --check src/preload.js && node --check src/rate-limits.js && node --check src/renderer/renderer.js && node --check plugins/pet-context-companion/scripts/install-and-launch.js"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",

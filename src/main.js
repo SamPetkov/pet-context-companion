@@ -9,6 +9,7 @@ let updateTimer = null;
 let lastAnchorKey = null;
 const rateLimitService = new RateLimitService();
 const OVERLAY_SIZE = { width: 860, height: 640 };
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 function clamp(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value));
@@ -136,25 +137,38 @@ function createOverlay() {
   });
 }
 
-app.whenReady().then(() => {
-  createOverlay();
-  updateTimer = setInterval(() => broadcastOverview(), 8_000);
-  globalShortcut.register('CommandOrControl+Shift+P', () => {
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.whenReady().then(() => {
+    createOverlay();
+    updateTimer = setInterval(() => broadcastOverview(), 8_000);
+    globalShortcut.register('CommandOrControl+Shift+P', () => {
+      if (!overlayWindow) {
+        createOverlay();
+        return;
+      }
+      if (overlayWindow.isVisible()) {
+        overlayWindow.hide();
+      } else {
+        overlayWindow.showInactive();
+        broadcastOverview(true);
+      }
+    });
+    globalShortcut.register('CommandOrControl+Shift+V', () => {
+      overlayWindow?.webContents.send('companion:voice-toggle');
+    });
+  });
+
+  app.on('second-instance', () => {
     if (!overlayWindow) {
       createOverlay();
       return;
     }
-    if (overlayWindow.isVisible()) {
-      overlayWindow.hide();
-    } else {
-      overlayWindow.showInactive();
-      broadcastOverview(true);
-    }
+    overlayWindow.showInactive();
+    broadcastOverview(true);
   });
-  globalShortcut.register('CommandOrControl+Shift+V', () => {
-    overlayWindow?.webContents.send('companion:voice-toggle');
-  });
-});
+}
 
 ipcMain.handle('companion:overview', () => {
   const overview = buildOverview();

@@ -1,0 +1,20 @@
+{
+  "name": "pet-context-companion",
+  "interface": {
+    "displayName": "Pet Context Companion"
+  },
+  "plugins": [
+    {
+      "name": "pet-context-companion",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pet-context-companion"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
