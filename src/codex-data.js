@@ -179,6 +179,26 @@ function readSessionMeta(filePath) {
   return metadata;
 }
 
+function workspaceName(cwd) {
+  if (!cwd) {
+    return null;
+  }
+  return /^[A-Za-z]:[\\/]/.test(cwd)
+    ? path.win32.basename(path.win32.normalize(cwd))
+    : path.basename(path.normalize(cwd));
+}
+
+function workspaceKey(cwd) {
+  if (!cwd) {
+    return null;
+  }
+  const normalized = /^[A-Za-z]:[\\/]/.test(cwd)
+    ? path.win32.normalize(cwd)
+    : path.normalize(cwd);
+  const withoutTrailingSeparator = normalized.replace(/[\\/]+$/, '');
+  return process.platform === 'win32' ? withoutTrailingSeparator.toLowerCase() : withoutTrailingSeparator;
+}
+
 function readTaskFromSession(file, sessionIndex, now = Date.now()) {
   const metadata = readSessionMeta(file.filePath);
   const sessionId = metadata.id || findSessionId(file.filePath);
@@ -194,7 +214,7 @@ function readTaskFromSession(file, sessionIndex, now = Date.now()) {
     visitObjects(record, (candidate) => updateTelemetry(telemetry, candidate));
   }
 
-  const workspace = metadata.cwd ? path.basename(metadata.cwd) : null;
+  const workspace = workspaceName(metadata.cwd);
   const contextPercent = telemetry.contextWindow && telemetry.contextUsed !== null
     ? Math.max(0, Math.min(100, Math.round((telemetry.contextUsed / telemetry.contextWindow) * 100)))
     : null;
@@ -245,12 +265,12 @@ function selectLatestWorkspaces(files, limit) {
 
   for (const file of files) {
     const metadata = readSessionMeta(file.filePath);
-    const workspaceKey = metadata.cwd || metadata.id || findSessionId(file.filePath) || file.filePath;
-    if (seenWorkspaces.has(workspaceKey)) {
+    const key = workspaceKey(metadata.cwd) || metadata.id || findSessionId(file.filePath) || file.filePath;
+    if (seenWorkspaces.has(key)) {
       continue;
     }
 
-    seenWorkspaces.add(workspaceKey);
+    seenWorkspaces.add(key);
     selected.push(file);
     if (selected.length === limit) {
       break;
@@ -288,4 +308,6 @@ module.exports = {
   readSessionIndex,
   readTaskFromSession,
   selectLatestWorkspaces,
+  workspaceKey,
+  workspaceName,
 };

@@ -84,6 +84,10 @@ function captureTestScreenshot() {
   const delay = Number(process.env.PET_COMPANION_SCREENSHOT_DELAY_MS) || 1_200;
   setTimeout(async () => {
     try {
+      if (process.env.PET_COMPANION_SCREENSHOT_VIEW === 'grid') {
+        await overlayWindow.webContents.executeJavaScript("document.querySelector('#view-toggle')?.click()");
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
       const image = await overlayWindow.webContents.capturePage();
       await fs.promises.mkdir(path.dirname(destination), { recursive: true });
       await fs.promises.writeFile(destination, image.toPNG());
@@ -158,6 +162,15 @@ ipcMain.handle('companion:overview', () => {
   return overview;
 });
 ipcMain.handle('companion:hide', () => overlayWindow?.hide());
+ipcMain.on('companion:set-ignore-mouse-events', (event, ignore) => {
+  if (typeof ignore !== 'boolean') {
+    return;
+  }
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) {
+    win.setIgnoreMouseEvents(ignore, { forward: true });
+  }
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

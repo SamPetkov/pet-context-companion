@@ -1,6 +1,8 @@
 const cloudStage = document.querySelector('#cloud-stage');
 const frontCloud = document.querySelector('#front-cloud');
 const backCloud = document.querySelector('#back-cloud');
+const gridStage = document.querySelector('#grid-stage');
+const viewToggle = document.querySelector('#view-toggle');
 const usagePodium = document.querySelector('#usage-podium');
 const quotaRows = document.querySelector('#quota-rows');
 const agentCount = document.querySelector('#agent-count');
@@ -14,6 +16,7 @@ const state = {
   page: 0,
   voiceEnabled: localStorage.getItem('pet-companion-audio') !== 'off',
   lastTaskKey: '',
+  viewMode: 'cloud',
 };
 
 function escapeHtml(value) {
@@ -72,6 +75,35 @@ function cloudMarkup(tasks, page, total) {
 
   return `
     <div class="cloud-eyebrow"><span>THOUGHTS</span><span>${page * PAGE_SIZE + 1}-${Math.min((page + 1) * PAGE_SIZE, total)} / ${total}</span></div>
+    <div class="repo-list">${rows}</div>
+  `;
+}
+
+function gridMarkup(tasks) {
+  if (!tasks.length) {
+    return '<p class="empty-cloud">No recent Codex workspaces found.</p>';
+  }
+
+  const rows = tasks.map((task) => {
+    const context = task.context.percent === null ? 'Waiting' : `${task.context.percent}%`;
+    const contextClass = task.context.percent === null ? 'repo-context--unknown' : '';
+    const repo = task.workspace || task.title;
+    return `
+      <article class="repo-row">
+        <span class="repo-name" title="${escapeHtml(repo)}">${escapeHtml(repo)}</span>
+        <span class="repo-context ${contextClass}">${context}</span>
+        <span class="repo-task" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</span>
+        <div class="repo-meta">
+          <strong>${task.status === 'working' ? 'Working' : 'Idle'}</strong>
+          <span>${formatTokens(task.context.used)} / ${formatTokens(task.context.window)}</span>
+          <span>In ${formatTokens(task.tokens.input)} Out ${formatTokens(task.tokens.output)}</span>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  return `
+    <div class="cloud-eyebrow" style="margin-bottom:16px;"><span>ALL WORKSPACES</span><span>${tasks.length} total</span></div>
     <div class="repo-list">${rows}</div>
   `;
 }
@@ -138,19 +170,28 @@ function positionClouds(layout) {
   const stageY = Math.max(12, Math.min(window.innerHeight - 345, pet.y - 238));
   const podiumX = Math.max(12, Math.min(window.innerWidth - 332, pet.x - 160));
   const podiumY = Math.max(360, Math.min(window.innerHeight - 170, pet.y + 74));
+  const gridX = side === 'left'
+    ? Math.max(12, Math.min(window.innerWidth - 572, pet.x - 650))
+    : Math.max(12, Math.min(window.innerWidth - 572, pet.x + 54));
+  const gridY = Math.max(12, Math.min(window.innerHeight - 420, pet.y - 236));
 
   cloudStage.style.left = `${Math.round(stageX)}px`;
   cloudStage.style.top = `${Math.round(stageY)}px`;
   cloudStage.dataset.side = side;
   usagePodium.style.left = `${Math.round(podiumX)}px`;
   usagePodium.style.top = `${Math.round(podiumY)}px`;
+  gridStage.style.left = `${Math.round(gridX)}px`;
+  gridStage.style.top = `${Math.round(gridY)}px`;
+
+  viewToggle.style.left = `${Math.round(pet.x + 38)}px`;
+  viewToggle.style.top = `${Math.round(pet.y - 48)}px`;
 }
 
 function renderPodium(overview) {
   const quotas = overview.quotas || {};
   quotaRows.innerHTML = `${quotaMarkup(quotas.primary, '5 HOUR')}${quotaMarkup(quotas.secondary, 'WEEK')}`;
   agentCount.textContent = overview.agents?.active ?? 0;
-  resetCount.textContent = quotas.resetCredits ?? '--';
+  resetCount.textContent = quotas.resetCredits ?? 'N/A';
   planLabel.textContent = quotas.plan ? quotas.plan.toUpperCase() : 'ACCOUNT';
 }
 
@@ -177,18 +218,30 @@ function render(cycling = false) {
   if (!state.overview) {
     return;
   }
+
   const tasks = state.overview.tasks || [];
-  const pages = chunk(tasks);
-  state.page %= pages.length;
-  frontCloud.innerHTML = cloudMarkup(pages[state.page], state.page, tasks.length);
-  backCloud.innerHTML = pages.length > 1
-    ? cloudMarkup(pages[(state.page + 1) % pages.length], (state.page + 1) % pages.length, tasks.length)
-    : '';
-  backCloud.hidden = pages.length < 2;
-  cloudStage.classList.toggle('is-cycling', cycling);
-  if (cycling) {
-    setTimeout(() => cloudStage.classList.remove('is-cycling'), 560);
+
+  if (state.viewMode === 'grid') {
+    cloudStage.hidden = true;
+    gridStage.hidden = false;
+    gridStage.innerHTML = gridMarkup(tasks);
+  } else {
+    cloudStage.hidden = false;
+    gridStage.hidden = true;
+
+    const pages = chunk(tasks);
+    state.page %= pages.length;
+    frontCloud.innerHTML = cloudMarkup(pages[state.page], state.page, tasks.length);
+    backCloud.innerHTML = pages.length > 1
+      ? cloudMarkup(pages[(state.page + 1) % pages.length], (state.page + 1) % pages.length, tasks.length)
+      : '';
+    backCloud.hidden = pages.length < 2;
+    cloudStage.classList.toggle('is-cycling', cycling);
+    if (cycling) {
+      setTimeout(() => cloudStage.classList.remove('is-cycling'), 560);
+    }
   }
+
   positionClouds(state.overview.layout);
   renderPodium(state.overview);
   redrawIcons();
@@ -205,6 +258,7 @@ function updateOverview(overview) {
 }
 
 setInterval(() => {
+  if (state.viewMode === 'grid') return; // Pause carousel in grid view
   const pages = chunk(state.overview?.tasks || []);
   if (pages.length > 1) {
     state.page = (state.page + 1) % pages.length;
@@ -212,6 +266,26 @@ setInterval(() => {
     voiceBriefing();
   }
 }, ROTATE_MS);
+
+viewToggle.addEventListener('click', () => {
+  state.viewMode = state.viewMode === 'cloud' ? 'grid' : 'cloud';
+  const expanded = state.viewMode === 'grid';
+  viewToggle.setAttribute('aria-pressed', String(expanded));
+  viewToggle.setAttribute('aria-label', expanded ? 'Show cycling workspaces' : 'Show all workspaces');
+  viewToggle.title = expanded ? 'Show cycling workspaces' : 'Show all workspaces';
+  render();
+});
+
+viewToggle.addEventListener('mouseenter', () => {
+  if (window.petCompanion.setIgnoreMouseEvents) {
+    window.petCompanion.setIgnoreMouseEvents(false);
+  }
+});
+viewToggle.addEventListener('mouseleave', () => {
+  if (window.petCompanion.setIgnoreMouseEvents) {
+    window.petCompanion.setIgnoreMouseEvents(true);
+  }
+});
 
 window.petCompanion.onOverview(updateOverview);
 window.petCompanion.onVoiceToggle(() => {

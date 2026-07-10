@@ -76,7 +76,7 @@ test('getOverview keeps the latest task for each workspace', (t) => {
     fs.utimesSync(filePath, new Date(modifiedAt), new Date(modifiedAt));
   };
 
-  addSession(DUPLICATE_SESSION_ID, 'Newest pet companion thread', 'C:\\work\\pet-companion', now + 1_000);
+  addSession(DUPLICATE_SESSION_ID, 'Newest pet companion thread', 'c:\\work\\pet-companion\\', now + 1_000);
   addSession(OTHER_SESSION_ID, 'Other repository thread', 'C:\\work\\other-repository', now);
 
   const overview = getOverview({ codexHome: root, now, limit: 6 });
