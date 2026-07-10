@@ -14,6 +14,8 @@ const companion = document.querySelector('.companion');
 
 const PAGE_SIZE = 3;
 const ROTATE_MS = 6_500;
+const IDLE_FADE_MS = 6_000;
+let idleFadeTimer = null;
 const state = {
   overview: null,
   page: 0,
@@ -211,6 +213,16 @@ function redrawIcons() {
   }
 }
 
+function scheduleIdleFade() {
+  clearTimeout(idleFadeTimer);
+  idleFadeTimer = setTimeout(() => companion.classList.add('is-idle'), IDLE_FADE_MS);
+}
+
+function wakeCompanion() {
+  clearTimeout(idleFadeTimer);
+  companion.classList.remove('is-idle');
+}
+
 function voiceBriefing() {
   if (!state.voiceEnabled || !state.overview || !('speechSynthesis' in window)) {
     return;
@@ -329,6 +341,15 @@ for (const panel of [cloudStage, gridStage]) {
   panel.addEventListener('mouseleave', () => window.petCompanion.setIgnoreMouseEvents?.(true));
   panel.addEventListener('click', openTaskFromPanel);
 }
+
+for (const surface of [cloudStage, gridStage, usagePodium, viewToggle]) {
+  surface.addEventListener('mouseenter', wakeCompanion);
+  surface.addEventListener('mousemove', wakeCompanion);
+  surface.addEventListener('mouseleave', scheduleIdleFade);
+}
+companion.addEventListener('focusin', wakeCompanion);
+companion.addEventListener('focusout', scheduleIdleFade);
+scheduleIdleFade();
 
 window.petCompanion.onOverview(updateOverview);
 window.petCompanion.onRestore(() => setViewMode('cloud'));

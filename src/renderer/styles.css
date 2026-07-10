@@ -35,6 +35,18 @@ button {
   position: relative;
   width: 100%;
   height: 100%;
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.companion.is-idle {
+  opacity: 0.38;
+  transition-duration: 1800ms;
+}
+
+.companion.is-idle:focus-within {
+  opacity: 1;
+  transition-duration: 180ms;
 }
 
 .cloud-stage {
@@ -496,6 +508,7 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .companion,
   .cloud-stage:not([hidden]),
   .grid-stage:not([hidden]),
   .lightbulb-btn.is-bouncing {
