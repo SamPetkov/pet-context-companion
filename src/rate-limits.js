@@ -18,8 +18,10 @@ function normalizeWindow(window) {
     return null;
   }
 
+  const usedPercent = Math.max(0, Math.min(100, window.usedPercent));
   return {
-    usedPercent: Math.max(0, Math.min(100, window.usedPercent)),
+    usedPercent,
+    remainingPercent: 100 - usedPercent,
     windowDurationMins: Number.isFinite(window.windowDurationMins) ? window.windowDurationMins : null,
     resetsAt: Number.isFinite(window.resetsAt) ? window.resetsAt : null,
   };

@@ -275,7 +275,7 @@ button {
 
 .quota-row {
   display: grid;
-  grid-template-columns: 45px minmax(0, 1fr) 38px;
+  grid-template-columns: 45px minmax(0, 1fr) 54px;
   align-items: center;
   gap: 8px;
 }

@@ -152,13 +152,16 @@ function quotaFillClass(percent) {
 }
 
 function quotaMarkup(window, fallback) {
-  const percent = Number.isFinite(window?.usedPercent) ? window.usedPercent : null;
+  const usedPercent = Number.isFinite(window?.usedPercent) ? window.usedPercent : null;
+  const remainingPercent = Number.isFinite(window?.remainingPercent)
+    ? window.remainingPercent
+    : usedPercent === null ? null : 100 - usedPercent;
   const label = quotaLabel(window, fallback);
   return `
     <div class="quota-row">
       <span class="quota-label">${label}</span>
-      <span class="quota-track"><span class="quota-fill ${percent === null ? '' : quotaFillClass(percent)}" style="width: ${percent ?? 0}%"></span></span>
-      <span class="quota-percent">${percent === null ? '--' : `${percent}%`}</span>
+      <span class="quota-track"><span class="quota-fill ${usedPercent === null ? '' : quotaFillClass(usedPercent)}" style="width: ${remainingPercent ?? 0}%"></span></span>
+      <span class="quota-percent">${remainingPercent === null ? '--' : `${Math.round(remainingPercent)}% left`}</span>
       <span class="quota-reset">${humanReset(window?.resetsAt)}</span>
     </div>
   `;

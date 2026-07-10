@@ -90,8 +90,20 @@ function positionOverlay(window, overview, force = false) {
   let y = maxY - 32;
   const useHighDpiSafePlacement = process.platform === 'win32' && display.scaleFactor > 1;
   if (useHighDpiSafePlacement) {
-    x = workArea.x + Math.round(workArea.width * 0.145);
-    y = workArea.y + Math.round(workArea.height * 0.05);
+    const source = overview.pet?.displayBounds;
+    const anchor = overview.pet?.anchor;
+    const progressX = source && anchor
+      ? clamp((anchor.x + (anchor.width / 2) - source.x) / source.width, 0, 1)
+      : 0.5;
+    const progressY = source && anchor
+      ? clamp((anchor.y + (anchor.height / 2) - source.y) / source.height, 0, 1)
+      : 0.5;
+    const safeMinX = workArea.x + 8;
+    const safeMinY = workArea.y + 8;
+    const safeMaxX = workArea.x + Math.round(workArea.width * 0.16);
+    const safeMaxY = workArea.y + Math.round(workArea.height * 0.075);
+    x = Math.round(safeMinX + ((safeMaxX - safeMinX) * progressX));
+    y = Math.round(safeMinY + ((safeMaxY - safeMinY) * progressY));
   } else if (anchorCenter) {
     x = clamp(
       anchorCenter.x - localPet.x,

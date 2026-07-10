@@ -287,6 +287,11 @@ function selectVisibleSessions(files, sessionIndex, now, limit, currentThreadId 
     || selected.find((task) => task.status === 'working' && !task.isSubagent);
   if (currentTask) {
     currentTask.current = true;
+    const currentIndex = selected.indexOf(currentTask);
+    if (currentIndex > 0) {
+      selected.splice(currentIndex, 1);
+      selected.unshift(currentTask);
+    }
   }
   return selected;
 }
