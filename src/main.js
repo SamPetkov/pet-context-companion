@@ -88,7 +88,11 @@ function positionOverlay(window, overview, force = false) {
 
   let x = maxX;
   let y = maxY - 32;
-  if (anchorCenter) {
+  const useHighDpiSafePlacement = process.platform === 'win32' && display.scaleFactor > 1;
+  if (useHighDpiSafePlacement) {
+    x = workArea.x + Math.round(workArea.width * 0.145);
+    y = workArea.y + Math.round(workArea.height * 0.05);
+  } else if (anchorCenter) {
     x = clamp(
       anchorCenter.x - localPet.x,
       workArea.x + 8,
