@@ -304,7 +304,13 @@ function cloneApplication(installDir) {
 function updateApplication(installDir) {
   assertTrustedCheckout(installDir);
   const environment = gitEnvironment();
-  run("git", ["-C", installDir, "fetch", "--depth", "1", "origin", DEFAULT_BRANCH], { env: environment });
+  const shallow = runOutput("git", ["-C", installDir, "rev-parse", "--is-shallow-repository"], { env: environment }) === "true";
+  const fetchArgs = ["-C", installDir, "fetch", "--no-tags"];
+  if (shallow) {
+    fetchArgs.push("--unshallow");
+  }
+  fetchArgs.push("origin", DEFAULT_BRANCH);
+  run("git", fetchArgs, { env: environment });
   run("git", ["-C", installDir, "merge", "--ff-only", "FETCH_HEAD"], { env: environment });
 }
 
