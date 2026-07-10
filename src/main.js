@@ -16,6 +16,7 @@ let petStatePath = null;
 let lastAnchorKey = null;
 let lastPetStateKey = null;
 let latestOverview = null;
+let manuallyHidden = false;
 const rateLimitService = new RateLimitService();
 const OVERLAY_SIZE = { width: 860, height: 640 };
 const PET_STATE_POLL_MS = 75;
@@ -110,13 +111,27 @@ function positionOverlay(window, overview, force = false) {
   };
 }
 
+function applyPetVisibility(overview, forcePosition = false) {
+  if (!overview.pet?.overlayOpen) {
+    overview.layout = null;
+    overlayWindow.hide();
+    return false;
+  }
+
+  overview.layout = positionOverlay(overlayWindow, overview, forcePosition);
+  if (!manuallyHidden && !overlayWindow.isVisible()) {
+    overlayWindow.showInactive();
+  }
+  return !manuallyHidden;
+}
+
 function broadcastOverview(forcePosition = false) {
   if (!overlayWindow || overlayWindow.isDestroyed()) {
     return;
   }
 
   const overview = buildOverview();
-  overview.layout = positionOverlay(overlayWindow, overview, forcePosition);
+  const visible = applyPetVisibility(overview, forcePosition);
   latestOverview = overview;
   lastPetStateKey = petStateKey(overview.pet);
   overlayWindow.webContents.send('companion:overview', overview);
@@ -125,6 +140,7 @@ function broadcastOverview(forcePosition = false) {
       broadcastOverview();
     }
   });
+  return visible;
 }
 
 function refreshPetAnchor() {
@@ -142,7 +158,7 @@ function refreshPetAnchor() {
   const overview = latestOverview
     ? { ...latestOverview, pet }
     : buildOverview();
-  overview.layout = positionOverlay(overlayWindow, overview);
+  applyPetVisibility(overview);
   latestOverview = overview;
   lastPetStateKey = nextPetStateKey;
   overlayWindow.webContents.send('companion:overview', overview);
@@ -229,7 +245,6 @@ function createOverlay() {
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   overlayWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   overlayWindow.once('ready-to-show', () => {
-    overlayWindow.showInactive();
     broadcastOverview(true);
     captureTestScreenshot();
   });
@@ -251,11 +266,13 @@ if (!hasSingleInstanceLock) {
         return;
       }
       if (overlayWindow.isVisible()) {
+        manuallyHidden = true;
         overlayWindow.hide();
       } else {
-        overlayWindow.showInactive();
-        overlayWindow.webContents.send('companion:restore');
-        broadcastOverview(true);
+        manuallyHidden = false;
+        if (broadcastOverview(true)) {
+          overlayWindow.webContents.send('companion:restore');
+        }
       }
     });
     globalShortcut.register('CommandOrControl+Shift+V', () => {
@@ -268,18 +285,24 @@ if (!hasSingleInstanceLock) {
       createOverlay();
       return;
     }
-    overlayWindow.showInactive();
-    overlayWindow.webContents.send('companion:restore');
-    broadcastOverview(true);
+    manuallyHidden = false;
+    if (broadcastOverview(true)) {
+      overlayWindow.webContents.send('companion:restore');
+    }
   });
 }
 
 ipcMain.handle('companion:overview', () => {
   const overview = buildOverview();
-  overview.layout = overlayWindow ? positionOverlay(overlayWindow, overview) : null;
+  overview.layout = overlayWindow && overview.pet?.overlayOpen
+    ? positionOverlay(overlayWindow, overview)
+    : null;
   return overview;
 });
-ipcMain.handle('companion:hide', () => overlayWindow?.hide());
+ipcMain.handle('companion:hide', () => {
+  manuallyHidden = true;
+  overlayWindow?.hide();
+});
 ipcMain.handle('companion:open-task', (_event, threadId) => {
   if (typeof threadId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(threadId)) {
     return false;
