@@ -171,9 +171,9 @@ function positionClouds(layout) {
   const pet = layout?.pet || { x: 670, y: 300 };
   const side = layout?.cloudSide || 'left';
   const stageX = side === 'left'
-    ? Math.max(12, pet.x - 660)
+    ? Math.max(12, pet.x - 590)
     : Math.min(window.innerWidth - 410, pet.x + 42);
-  const stageY = Math.max(12, Math.min(window.innerHeight - 345, pet.y - 238));
+  const stageY = Math.max(12, Math.min(window.innerHeight - 345, pet.y - 250));
   const podiumX = Math.max(12, Math.min(window.innerWidth - 332, pet.x - 160));
   const gridX = side === 'left'
     ? Math.max(12, Math.min(window.innerWidth - 512, pet.x - 650))
