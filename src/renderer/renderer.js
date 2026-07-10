@@ -273,6 +273,17 @@ function updateOverview(overview) {
   render();
 }
 
+function setViewMode(viewMode) {
+  state.viewMode = viewMode;
+  const expanded = viewMode === 'grid';
+  const minimized = viewMode === 'minimized';
+  viewToggle.dataset.mode = viewMode;
+  viewToggle.setAttribute('aria-pressed', String(expanded));
+  viewToggle.setAttribute('aria-label', minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces');
+  viewToggle.title = minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces';
+  render();
+}
+
 setInterval(() => {
   if (state.viewMode !== 'cloud') return; // Pause the carousel outside the thought-cloud view
   const pages = chunk(state.overview?.tasks || []);
@@ -284,18 +295,11 @@ setInterval(() => {
 }, ROTATE_MS);
 
 viewToggle.addEventListener('click', () => {
-  state.viewMode = {
+  setViewMode({
     cloud: 'grid',
     grid: 'minimized',
     minimized: 'cloud',
-  }[state.viewMode];
-  const expanded = state.viewMode === 'grid';
-  const minimized = state.viewMode === 'minimized';
-  viewToggle.dataset.mode = state.viewMode;
-  viewToggle.setAttribute('aria-pressed', String(expanded));
-  viewToggle.setAttribute('aria-label', minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces');
-  viewToggle.title = minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces';
-  render();
+  }[state.viewMode]);
 });
 
 viewToggle.addEventListener('mouseenter', () => {
@@ -310,6 +314,7 @@ viewToggle.addEventListener('mouseleave', () => {
 });
 
 window.petCompanion.onOverview(updateOverview);
+window.petCompanion.onRestore(() => setViewMode('cloud'));
 window.petCompanion.onVoiceToggle(() => {
   state.voiceEnabled = !state.voiceEnabled;
   localStorage.setItem('pet-companion-audio', state.voiceEnabled ? 'on' : 'off');

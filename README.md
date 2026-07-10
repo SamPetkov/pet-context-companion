@@ -4,6 +4,8 @@ Pet Context Companion is a local cross-platform thought-cloud overlay for the Op
 
 It is an independent community project and is not affiliated with or endorsed by OpenAI.
 
+![Pet Context Companion showing repository context and Codex capacity with blue agent helpers in a dreamy pink-cloud scene](docs/images/pet-context-companion-example.png)
+
 ## What it shows
 
 - Up to six distinct recent Codex workspaces, grouped so repeated threads from one repository do not crowd out the rest.

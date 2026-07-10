@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld('petCompanion', {
     ipcRenderer.on('companion:overview', handler);
     return () => ipcRenderer.removeListener('companion:overview', handler);
   },
+  onRestore: (listener) => {
+    ipcRenderer.on('companion:restore', listener);
+    return () => ipcRenderer.removeListener('companion:restore', listener);
+  },
   onVoiceToggle: (listener) => {
     ipcRenderer.on('companion:voice-toggle', listener);
     return () => ipcRenderer.removeListener('companion:voice-toggle', listener);

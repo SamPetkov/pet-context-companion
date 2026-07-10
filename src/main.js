@@ -217,6 +217,7 @@ if (!hasSingleInstanceLock) {
         overlayWindow.hide();
       } else {
         overlayWindow.showInactive();
+        overlayWindow.webContents.send('companion:restore');
         broadcastOverview(true);
       }
     });
@@ -231,6 +232,7 @@ if (!hasSingleInstanceLock) {
       return;
     }
     overlayWindow.showInactive();
+    overlayWindow.webContents.send('companion:restore');
     broadcastOverview(true);
   });
 }
