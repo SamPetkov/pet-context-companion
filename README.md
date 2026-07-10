@@ -38,7 +38,7 @@ This is a Codex plugin rather than a ChatGPT App. A ChatGPT App runs through a r
 ## Requirements
 
 - Windows, macOS, or Linux.
-- Node.js 20 or newer.
+- Node.js 22.12 or newer.
 - OpenAI Codex desktop app, signed in and used at least once.
 
 ## Run it
@@ -46,7 +46,8 @@ This is a Codex plugin rather than a ChatGPT App. A ChatGPT App runs through a r
 ```powershell
 git clone https://github.com/SamPetkov/pet-context-companion.git
 cd pet-context-companion
-npm install
+npm ci --ignore-scripts
+node node_modules/electron/install.js
 npm start
 ```
 
@@ -78,6 +79,12 @@ npm run check
 ```
 
 The parser has fixture-based tests and accepts an alternate `CODEX_HOME` environment variable, making it straightforward to test against copied, redacted session fixtures.
+
+## Security
+
+The plugin installer accepts only this repository's `main` branch, refuses tracked local changes, installs the exact dependency versions in `package-lock.json`, blocks dependency lifecycle scripts, and then runs only Electron's checksum-verified bootstrap script. It does not require an OpenAI API key and does not send local session data, source code, prompts, or chat messages to a service outside the local Codex app-server.
+
+See [SECURITY.md](SECURITY.md) for the supported installation path, verification details, and how to report a vulnerability.
 
 ## License
 

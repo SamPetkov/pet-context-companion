@@ -9,7 +9,54 @@ const path = require("node:path");
 
 const APP_NAME = "pet-context-companion";
 const REPOSITORY_URL = "https://github.com/SamPetkov/pet-context-companion.git";
+const TRUSTED_REPOSITORY_URL = "https://github.com/sampetkov/pet-context-companion";
+const DEFAULT_BRANCH = "main";
+const OFFICIAL_NPM_REGISTRY = "https://registry.npmjs.org/";
 const SUPPORTED_ACTIONS = new Set(["check", "install", "start", "update"]);
+const INSTALL_ENVIRONMENT_BLOCKLIST = new Set([
+  "ELECTRON_CUSTOM_DIR",
+  "ELECTRON_CUSTOM_VERSION",
+  "ELECTRON_MIRROR",
+  "ELECTRON_OVERRIDE_DIST_PATH",
+  "ELECTRON_RUN_AS_NODE",
+  "NODE_EXTRA_CA_CERTS",
+  "NODE_OPTIONS",
+  "NODE_TLS_REJECT_UNAUTHORIZED",
+  "electron_config_cache",
+  "force_no_cache",
+  "npm_config_ca",
+  "npm_config_cafile",
+  "npm_config_electron_mirror",
+  "npm_config_electron_use_remote_checksums",
+  "npm_config_node_options",
+  "npm_config_registry",
+  "npm_config_strict_ssl",
+]);
+const LAUNCH_ENVIRONMENT_BLOCKLIST = new Set([
+  "ELECTRON_OVERRIDE_DIST_PATH",
+  "ELECTRON_RUN_AS_NODE",
+  "NODE_OPTIONS",
+  "PET_COMPANION_SCREENSHOT",
+  "PET_COMPANION_SCREENSHOT_DELAY_MS",
+  "PET_COMPANION_SCREENSHOT_VIEW",
+]);
+const GIT_ENVIRONMENT_BLOCKLIST = new Set([
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_CONFIG",
+  "GIT_CONFIG_COUNT",
+  "GIT_CONFIG_GLOBAL",
+  "GIT_CONFIG_NOSYSTEM",
+  "GIT_CONFIG_PARAMETERS",
+  "GIT_CONFIG_SYSTEM",
+  "GIT_DIR",
+  "GIT_EXEC_PATH",
+  "GIT_INDEX_FILE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_SSH",
+  "GIT_SSH_COMMAND",
+  "GIT_SSL_NO_VERIFY",
+  "GIT_WORK_TREE",
+]);
 
 function resolveInstallDir({
   platform = process.platform,
@@ -48,8 +95,9 @@ function executable(name) {
 
 function commandInvocation(command, args) {
   if (process.platform === "win32" && /\.(cmd|bat)$/i.test(command)) {
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR;
     return {
-      command: process.env.ComSpec || "cmd.exe",
+      command: systemRoot ? path.join(systemRoot, "System32", "cmd.exe") : "cmd.exe",
       args: ["/d", "/s", "/c", [command, ...args].join(" ")],
     };
   }
@@ -72,6 +120,25 @@ function run(command, args, options = {}) {
     throw new Error(`${command} exited with status ${result.status}.`);
   }
   return result;
+}
+
+function runOutput(command, args, options = {}) {
+  const invocation = commandInvocation(command, args);
+  const result = spawnSync(invocation.command, invocation.args, {
+    cwd: options.cwd,
+    env: options.env || process.env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`${command} exited with status ${result.status}.`);
+  }
+  return result.stdout.trim();
 }
 
 function commandVersion(command, args = ["--version"]) {
@@ -99,13 +166,117 @@ function readInstalledPackage(installDir) {
 }
 
 function dependenciesReady(installDir) {
-  return fs.existsSync(path.join(installDir, "node_modules", "electron", "package.json"));
+  try {
+    return Boolean(electronExecutable(installDir));
+  } catch {
+    return false;
+  }
+}
+
+function isSupportedNodeVersion(version = process.versions.node) {
+  const match = String(version).match(/^v?(\d+)\.(\d+)\./);
+  if (!match) {
+    return false;
+  }
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  return major > 22 || (major === 22 && minor >= 12);
 }
 
 function ensureNodeVersion() {
-  const major = Number(process.versions.node.split(".")[0]);
-  if (!Number.isFinite(major) || major < 20) {
-    throw new Error(`Node.js 20 or newer is required. Current version: ${process.version}.`);
+  if (!isSupportedNodeVersion()) {
+    throw new Error(`Node.js 22.12 or newer is required. Current version: ${process.version}.`);
+  }
+}
+
+function normalizeRepositoryUrl(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  return value
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\.git$/i, "")
+    .toLowerCase();
+}
+
+function isTrustedRepositoryUrl(value) {
+  return normalizeRepositoryUrl(value) === TRUSTED_REPOSITORY_URL;
+}
+
+function sanitizedEnvironment(baseEnvironment = process.env, blocklist = INSTALL_ENVIRONMENT_BLOCKLIST) {
+  const environment = { ...baseEnvironment };
+  const blockedNames = new Set([...blocklist].map((key) => key.toUpperCase()));
+  for (const key of blocklist) {
+    blockedNames.add(key.toUpperCase());
+  }
+  for (const key of Object.keys(environment)) {
+    if (blockedNames.has(key.toUpperCase())) {
+      delete environment[key];
+    }
+  }
+  return environment;
+}
+
+function installationEnvironment(baseEnvironment = process.env) {
+  const environment = sanitizedEnvironment(baseEnvironment);
+  environment.npm_config_registry = OFFICIAL_NPM_REGISTRY;
+  environment.npm_config_strict_ssl = "true";
+  return environment;
+}
+
+function launchEnvironment(baseEnvironment = process.env) {
+  return sanitizedEnvironment(baseEnvironment, LAUNCH_ENVIRONMENT_BLOCKLIST);
+}
+
+function gitEnvironment(baseEnvironment = process.env) {
+  return sanitizedEnvironment(baseEnvironment, GIT_ENVIRONMENT_BLOCKLIST);
+}
+
+function checkoutStatus(installDir) {
+  if (!fs.existsSync(path.join(installDir, ".git"))) {
+    return {
+      isGitCheckout: false,
+      trustedOrigin: false,
+      branch: null,
+      workingTreeClean: false,
+    };
+  }
+
+  try {
+    const environment = gitEnvironment();
+    const origin = runOutput("git", ["-C", installDir, "remote", "get-url", "origin"], { env: environment });
+    const branch = runOutput("git", ["-C", installDir, "branch", "--show-current"], { env: environment });
+    const changes = runOutput("git", ["-C", installDir, "status", "--porcelain", "--untracked-files=no"], { env: environment });
+    return {
+      isGitCheckout: true,
+      trustedOrigin: isTrustedRepositoryUrl(origin),
+      branch,
+      workingTreeClean: changes.length === 0,
+    };
+  } catch {
+    return {
+      isGitCheckout: true,
+      trustedOrigin: false,
+      branch: null,
+      workingTreeClean: false,
+    };
+  }
+}
+
+function assertTrustedCheckout(installDir) {
+  const status = checkoutStatus(installDir);
+  if (!status.isGitCheckout) {
+    throw new Error(`The installation is not a Git checkout: ${installDir}`);
+  }
+  if (!status.trustedOrigin) {
+    throw new Error("The installation origin is not the official Pet Context Companion repository.");
+  }
+  if (status.branch !== DEFAULT_BRANCH) {
+    throw new Error(`The installation must be on the ${DEFAULT_BRANCH} branch before it can run.`);
+  }
+  if (!status.workingTreeClean) {
+    throw new Error("The installation has modified tracked files. Reinstall from the official repository before running it.");
   }
 }
 
@@ -125,20 +296,34 @@ function cloneApplication(installDir) {
     );
   }
 
-  run("git", ["clone", "--depth", "1", REPOSITORY_URL, installDir]);
+  run("git", ["clone", "--depth", "1", "--branch", DEFAULT_BRANCH, "--single-branch", REPOSITORY_URL, installDir], {
+    env: gitEnvironment(),
+  });
 }
 
 function updateApplication(installDir) {
-  if (!fs.existsSync(path.join(installDir, ".git"))) {
-    throw new Error(`Cannot update because the installation is not a Git checkout: ${installDir}`);
-  }
-  run("git", ["-C", installDir, "pull", "--ff-only"]);
+  assertTrustedCheckout(installDir);
+  const environment = gitEnvironment();
+  run("git", ["-C", installDir, "fetch", "--depth", "1", "origin", DEFAULT_BRANCH], { env: environment });
+  run("git", ["-C", installDir, "merge", "--ff-only", "FETCH_HEAD"], { env: environment });
 }
 
 function installDependencies(installDir) {
+  if (!fs.existsSync(path.join(installDir, "package-lock.json"))) {
+    throw new Error("The installation is missing package-lock.json, so dependency integrity cannot be verified.");
+  }
   const npm = executable("npm");
-  const command = fs.existsSync(path.join(installDir, "package-lock.json")) ? "ci" : "install";
-  run(npm, [command, "--include=dev", "--no-audit", "--no-fund"], { cwd: installDir });
+  const environment = installationEnvironment();
+  run(npm, ["ci", "--include=dev", "--ignore-scripts", "--no-audit", "--no-fund", `--registry=${OFFICIAL_NPM_REGISTRY}`, "--strict-ssl=true"], {
+    cwd: installDir,
+    env: environment,
+  });
+
+  const electronInstaller = path.join(installDir, "node_modules", "electron", "install.js");
+  if (!fs.existsSync(electronInstaller)) {
+    throw new Error("Electron's verified installer was not installed from the lockfile.");
+  }
+  run(process.execPath, [electronInstaller], { cwd: installDir, env: environment });
 }
 
 function electronExecutable(installDir) {
@@ -154,7 +339,7 @@ function launchApplication(installDir) {
   const child = spawn(electronExecutable(installDir), ["."], {
     cwd: installDir,
     detached: true,
-    env: process.env,
+    env: launchEnvironment(),
     stdio: "ignore",
     windowsHide: true,
   });
@@ -163,6 +348,7 @@ function launchApplication(installDir) {
 
 function installationStatus(installDir) {
   const manifest = readInstalledPackage(installDir);
+  const checkout = checkoutStatus(installDir);
   return {
     installDir,
     installed: Boolean(manifest),
@@ -171,6 +357,10 @@ function installationStatus(installDir) {
     node: process.version,
     git: commandVersion("git"),
     npm: commandVersion(executable("npm")),
+    lockfilePresent: fs.existsSync(path.join(installDir, "package-lock.json")),
+    trustedOrigin: checkout.trustedOrigin,
+    branch: checkout.branch,
+    workingTreeClean: checkout.workingTreeClean,
   };
 }
 
@@ -184,15 +374,19 @@ function main(argv = process.argv.slice(2)) {
   }
 
   ensureNodeVersion();
+  ensureCommand("git", "Git");
   let manifest = readInstalledPackage(installDir);
   if (!manifest) {
-    ensureCommand("git", "Git");
     cloneApplication(installDir);
     manifest = readInstalledPackage(installDir);
+    if (!manifest) {
+      throw new Error(`The official repository did not contain a ${APP_NAME} package.`);
+    }
   } else if (action === "update") {
-    ensureCommand("git", "Git");
     updateApplication(installDir);
   }
+
+  assertTrustedCheckout(installDir);
 
   if (action === "install" || action === "update" || !dependenciesReady(installDir)) {
     ensureCommand(executable("npm"), "npm");
@@ -214,6 +408,12 @@ if (require.main === module) {
 }
 
 module.exports = {
+  checkoutStatus,
+  gitEnvironment,
+  installationEnvironment,
+  isSupportedNodeVersion,
+  isTrustedRepositoryUrl,
+  launchEnvironment,
   installationStatus,
   parseAction,
   resolveInstallDir,

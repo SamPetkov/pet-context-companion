@@ -5,10 +5,14 @@
   "main": "src/main.js",
   "license": "MIT",
   "private": false,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "start": "electron .",
     "test": "node --test",
-    "check": "node --check src/codex-data.js && node --check src/main.js && node --check src/preload.js && node --check src/rate-limits.js && node --check src/renderer/renderer.js && node --check plugins/pet-context-companion/scripts/install-and-launch.js"
+    "check": "node --check src/codex-data.js && node --check src/main.js && node --check src/preload.js && node --check src/rate-limits.js && node --check src/renderer/renderer.js && node --check plugins/pet-context-companion/scripts/install-and-launch.js",
+    "security": "npm audit --audit-level=high && npm run check"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
