@@ -250,13 +250,54 @@ function readPetState(codexHome) {
     const bounds = state['electron-avatar-overlay-bounds'];
     const anchor = bounds?.anchor;
     const hasAnchor = Number.isFinite(anchor?.x) && Number.isFinite(anchor?.y);
-    return {
+    const displayBounds = bounds?.displayBounds;
+    const hasDisplayBounds = Number.isFinite(displayBounds?.x)
+      && Number.isFinite(displayBounds?.y)
+      && Number.isFinite(displayBounds?.width)
+      && Number.isFinite(displayBounds?.height)
+      && displayBounds.width > 0
+      && displayBounds.height > 0;
+    const pet = {
       overlayOpen: state['electron-avatar-overlay-open'] === true,
       anchor: hasAnchor ? { x: anchor.x, y: anchor.y, width: anchor.width || 0, height: anchor.height || 0 } : null,
     };
+    if (hasDisplayBounds) {
+      pet.displayBounds = {
+        x: displayBounds.x,
+        y: displayBounds.y,
+        width: displayBounds.width,
+        height: displayBounds.height,
+      };
+    }
+    if (bounds?.displayId !== undefined && bounds?.displayId !== null) {
+      pet.displayId = bounds.displayId;
+    }
+    return pet;
   } catch {
     return { overlayOpen: false, anchor: null };
   }
+}
+
+function mapPetAnchorToDisplay(pet, display) {
+  const anchor = pet?.anchor;
+  if (!anchor) {
+    return null;
+  }
+
+  const rawCenter = {
+    x: anchor.x + (anchor.width / 2),
+    y: anchor.y + (anchor.height / 2),
+  };
+  const source = pet.displayBounds;
+  const target = display?.bounds;
+  if (!source || !target || source.width <= 0 || source.height <= 0) {
+    return rawCenter;
+  }
+
+  return {
+    x: target.x + ((rawCenter.x - source.x) * (target.width / source.width)),
+    y: target.y + ((rawCenter.y - source.y) * (target.height / source.height)),
+  };
 }
 
 function selectLatestWorkspaces(files, limit) {
@@ -304,6 +345,7 @@ module.exports = {
   findSessionId,
   getCodexHome,
   getOverview,
+  mapPetAnchorToDisplay,
   parseJsonLines,
   readPetState,
   readSessionIndex,

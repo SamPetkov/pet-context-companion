@@ -14,7 +14,11 @@ function writeFixture(root) {
   fs.mkdirSync(sessionDirectory, { recursive: true });
   fs.writeFileSync(path.join(root, '.codex-global-state.json'), JSON.stringify({
     'electron-avatar-overlay-open': true,
-    'electron-avatar-overlay-bounds': { anchor: { x: 1673, y: 781, width: 108, height: 116 } },
+    'electron-avatar-overlay-bounds': {
+      anchor: { x: 1673, y: 781, width: 108, height: 116 },
+      displayBounds: { x: 0, y: 0, width: 1920, height: 1200 },
+      displayId: 3535343121,
+    },
   }));
   fs.writeFileSync(path.join(root, 'session_index.jsonl'), `${JSON.stringify({
     id: SESSION_ID,
@@ -48,7 +52,12 @@ test('getOverview derives task context and total token usage from local telemetr
   const overview = getOverview({ codexHome: root, now: Date.now() });
 
   assert.equal(overview.pet.overlayOpen, true);
-  assert.deepEqual(overview.pet.anchor, { x: 1673, y: 781, width: 108, height: 116 });
+  assert.deepEqual(overview.pet, {
+    overlayOpen: true,
+    anchor: { x: 1673, y: 781, width: 108, height: 116 },
+    displayBounds: { x: 0, y: 0, width: 1920, height: 1200 },
+    displayId: 3535343121,
+  });
   assert.equal(overview.tasks.length, 1);
   assert.equal(overview.tasks[0].title, 'Build task context overlay');
   assert.equal(overview.tasks[0].context.used, 68000);
@@ -56,6 +65,19 @@ test('getOverview derives task context and total token usage from local telemetr
   assert.equal(overview.tasks[0].context.percent, 25);
   assert.equal(overview.tasks[0].tokens.input, 140000);
   assert.equal(overview.tasks[0].tokens.output, 9000);
+});
+
+test('mapPetAnchorToDisplay converts physical pet coordinates to Electron display coordinates', () => {
+  const { mapPetAnchorToDisplay } = require('../src/codex-data');
+  assert.deepEqual(
+    mapPetAnchorToDisplay({
+      anchor: { x: 1628, y: 686, width: 113, height: 123 },
+      displayBounds: { x: 0, y: 0, width: 1920, height: 1200 },
+    }, {
+      bounds: { x: 0, y: 0, width: 1280, height: 800 },
+    }),
+    { x: 1123, y: 498.3333333333333 },
+  );
 });
 
 test('getOverview keeps the latest task for each workspace', (t) => {

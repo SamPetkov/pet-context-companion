@@ -1,7 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
-const { getCodexHome, getOverview, readPetState } = require('./codex-data');
+const {
+  getCodexHome,
+  getOverview,
+  mapPetAnchorToDisplay,
+  readPetState,
+} = require('./codex-data');
 const { RateLimitService } = require('./rate-limits');
 
 let overlayWindow = null;
@@ -30,34 +35,66 @@ function buildOverview() {
 
 function petStateKey(pet) {
   const anchor = pet?.anchor;
+  const display = pet?.displayBounds;
   return anchor
-    ? `${pet.overlayOpen}:${anchor.x}:${anchor.y}:${anchor.width}:${anchor.height}`
+    ? `${pet.overlayOpen}:${anchor.x}:${anchor.y}:${anchor.width}:${anchor.height}:${pet.displayId ?? ''}:${display?.x ?? ''}:${display?.y ?? ''}:${display?.width ?? ''}:${display?.height ?? ''}`
     : `${pet?.overlayOpen}:none`;
 }
 
-function positionOverlay(window, overview, force = false) {
-  const anchor = overview.pet?.anchor;
-  const anchorCenter = anchor
+function normalizedDisplayId(displayId) {
+  const numericId = Number(displayId);
+  return Number.isFinite(numericId) ? numericId >>> 0 : null;
+}
+
+function displayForPet(pet) {
+  const displays = screen.getAllDisplays();
+  const petDisplayId = normalizedDisplayId(pet?.displayId);
+  if (petDisplayId !== null) {
+    const matchingDisplay = displays.find((display) => normalizedDisplayId(display.id) === petDisplayId);
+    if (matchingDisplay) {
+      return matchingDisplay;
+    }
+  }
+
+  const source = pet?.displayBounds;
+  if (source) {
+    const matchingDisplay = displays.find((display) => (
+      Math.abs((display.bounds.width * display.scaleFactor) - source.width) < 2
+      && Math.abs((display.bounds.height * display.scaleFactor) - source.height) < 2
+    ));
+    if (matchingDisplay) {
+      return matchingDisplay;
+    }
+  }
+
+  const anchor = pet?.anchor;
+  const rawCenter = anchor
     ? { x: anchor.x + (anchor.width / 2), y: anchor.y + (anchor.height / 2) }
-    : null;
-  const display = screen.getDisplayNearestPoint(anchorCenter || screen.getCursorScreenPoint());
+    : screen.getCursorScreenPoint();
+  return screen.getDisplayNearestPoint(rawCenter);
+}
+
+function positionOverlay(window, overview, force = false) {
+  const display = displayForPet(overview.pet);
+  const anchorCenter = mapPetAnchorToDisplay(overview.pet, display);
   const { workArea } = display;
   const maxX = workArea.x + workArea.width - OVERLAY_SIZE.width - 8;
   const maxY = workArea.y + workArea.height - OVERLAY_SIZE.height - 8;
   const cloudSide = anchorCenter && anchorCenter.x - workArea.x > (workArea.x + workArea.width) - anchorCenter.x
     ? 'left'
     : 'right';
+  const localPet = { x: cloudSide === 'left' ? 670 : 190, y: 300 };
   const anchorKey = anchorCenter ? `${anchorCenter.x}:${anchorCenter.y}:${cloudSide}` : 'fallback';
 
   let x = maxX;
   let y = maxY - 32;
   if (anchorCenter) {
     x = clamp(
-      anchorCenter.x - (cloudSide === 'left' ? 680 : 180),
+      anchorCenter.x - localPet.x,
       workArea.x + 8,
       maxX,
     );
-    y = clamp(anchorCenter.y - 310, workArea.y + 8, maxY);
+    y = clamp(anchorCenter.y - localPet.y, workArea.y + 8, maxY);
   }
 
   if (force || anchorKey !== lastAnchorKey) {
@@ -67,9 +104,7 @@ function positionOverlay(window, overview, force = false) {
 
   return {
     cloudSide,
-    pet: anchorCenter
-      ? { x: Math.round(anchorCenter.x - x), y: Math.round(anchorCenter.y - y) }
-      : { x: cloudSide === 'left' ? 670 : 190, y: 300 },
+    pet: localPet,
   };
 }
 
