@@ -4,8 +4,6 @@ Pet Context Companion is a local cross-platform thought-cloud overlay for the Op
 
 It is an independent community project and is not affiliated with or endorsed by OpenAI.
 
-![Pet Context Companion showing repository context and Codex capacity with blue agent helpers in a dreamy pink-cloud scene](docs/images/pet-context-companion-example.png)
-
 ## What it shows
 
 - Up to six distinct recent Codex workspaces, grouped so repeated threads from one repository do not crowd out the rest.
@@ -22,9 +20,7 @@ The panel reads the local Codex JSONL session files. It does not send telemetry,
 
 ## Layouts
 
-| Cycling thoughts | All active workspaces |
-| --- | --- |
-| ![Cycling pink thought-cloud layout](docs/images/layout-thoughts.png) | ![Expanded all-workspaces layout](docs/images/layout-all-workspaces.png) |
+![Pet Context Companion cycling-thought and all-active-workspaces modes on a white background](docs/images/layouts-white.png)
 
 ## Install as a Codex plugin
 
