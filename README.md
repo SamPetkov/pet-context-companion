@@ -8,7 +8,8 @@ It is an independent community project and is not affiliated with or endorsed by
 
 - Up to six distinct recent Codex workspaces, grouped so repeated threads from one repository do not crowd out the rest.
 - A two-layer thought-cloud carousel that automatically cycles through all visible repositories.
-- A lightbulb control that switches between the cycling view and an all-workspaces glass layout.
+- A three-step lightbulb control: cycling thoughts, all-workspaces glass layout, then a minimized lamp-only state.
+- Live pet-anchor tracking, so the companion follows the Codex pet as the pet is dragged.
 - Current context-window usage: `used tokens / model context window` and percentage for each visible workspace.
 - Cumulative input and output tokens, plus a working or idle state for each workspace.
 - A usage podium with the current 5-hour and weekly ChatGPT Codex windows, reset times, and earned reset-credit count when the account exposes them.

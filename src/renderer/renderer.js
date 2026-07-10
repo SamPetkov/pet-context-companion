@@ -10,6 +10,7 @@ const resetCount = document.querySelector('#reset-count');
 const planLabel = document.querySelector('#plan-label');
 const dreamSparkleOne = document.querySelector('.dream-sparkle--one');
 const dreamSparkleTwo = document.querySelector('.dream-sparkle--two');
+const companion = document.querySelector('.companion');
 
 const PAGE_SIZE = 3;
 const ROTATE_MS = 6_500;
@@ -228,12 +229,14 @@ function render(cycling = false) {
   }
 
   const tasks = state.overview.tasks || [];
+  const minimized = state.viewMode === 'minimized';
+  companion.classList.toggle('is-minimized', minimized);
 
   if (state.viewMode === 'grid') {
     cloudStage.hidden = true;
     gridStage.hidden = false;
     gridStage.innerHTML = gridMarkup(tasks);
-  } else {
+  } else if (state.viewMode === 'cloud') {
     cloudStage.hidden = false;
     gridStage.hidden = true;
 
@@ -248,8 +251,13 @@ function render(cycling = false) {
     if (cycling) {
       setTimeout(() => cloudStage.classList.remove('is-cycling'), 560);
     }
+  } else {
+    cloudStage.hidden = true;
+    gridStage.hidden = true;
+    cloudStage.classList.remove('is-cycling');
   }
 
+  usagePodium.hidden = minimized;
   positionClouds(state.overview.layout);
   renderPodium(state.overview);
   redrawIcons();
@@ -266,7 +274,7 @@ function updateOverview(overview) {
 }
 
 setInterval(() => {
-  if (state.viewMode === 'grid') return; // Pause carousel in grid view
+  if (state.viewMode !== 'cloud') return; // Pause the carousel outside the thought-cloud view
   const pages = chunk(state.overview?.tasks || []);
   if (pages.length > 1) {
     state.page = (state.page + 1) % pages.length;
@@ -276,11 +284,17 @@ setInterval(() => {
 }, ROTATE_MS);
 
 viewToggle.addEventListener('click', () => {
-  state.viewMode = state.viewMode === 'cloud' ? 'grid' : 'cloud';
+  state.viewMode = {
+    cloud: 'grid',
+    grid: 'minimized',
+    minimized: 'cloud',
+  }[state.viewMode];
   const expanded = state.viewMode === 'grid';
+  const minimized = state.viewMode === 'minimized';
+  viewToggle.dataset.mode = state.viewMode;
   viewToggle.setAttribute('aria-pressed', String(expanded));
-  viewToggle.setAttribute('aria-label', expanded ? 'Show cycling workspaces' : 'Show all workspaces');
-  viewToggle.title = expanded ? 'Show cycling workspaces' : 'Show all workspaces';
+  viewToggle.setAttribute('aria-label', minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces');
+  viewToggle.title = minimized ? 'Restore cycling workspaces' : expanded ? 'Minimize companion' : 'Show all workspaces';
   render();
 });
 

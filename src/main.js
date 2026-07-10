@@ -1,14 +1,19 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
-const { getOverview } = require('./codex-data');
+const { getCodexHome, getOverview, readPetState } = require('./codex-data');
 const { RateLimitService } = require('./rate-limits');
 
 let overlayWindow = null;
 let updateTimer = null;
+let anchorRefreshTimer = null;
+let petStatePath = null;
 let lastAnchorKey = null;
+let lastPetStateKey = null;
+let latestOverview = null;
 const rateLimitService = new RateLimitService();
 const OVERLAY_SIZE = { width: 860, height: 640 };
+const PET_STATE_POLL_MS = 75;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 function clamp(value, minimum, maximum) {
@@ -21,6 +26,13 @@ function buildOverview() {
     ...overview,
     quotas: rateLimitService.snapshot,
   };
+}
+
+function petStateKey(pet) {
+  const anchor = pet?.anchor;
+  return anchor
+    ? `${pet.overlayOpen}:${anchor.x}:${anchor.y}:${anchor.width}:${anchor.height}`
+    : `${pet?.overlayOpen}:none`;
 }
 
 function positionOverlay(window, overview, force = false) {
@@ -68,12 +80,58 @@ function broadcastOverview(forcePosition = false) {
 
   const overview = buildOverview();
   overview.layout = positionOverlay(overlayWindow, overview, forcePosition);
+  latestOverview = overview;
+  lastPetStateKey = petStateKey(overview.pet);
   overlayWindow.webContents.send('companion:overview', overview);
   rateLimitService.refresh().then((updated) => {
     if (updated) {
       broadcastOverview();
     }
   });
+}
+
+function refreshPetAnchor() {
+  anchorRefreshTimer = null;
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+
+  const pet = readPetState(getCodexHome());
+  const nextPetStateKey = petStateKey(pet);
+  if (latestOverview && nextPetStateKey === lastPetStateKey) {
+    return;
+  }
+
+  const overview = latestOverview
+    ? { ...latestOverview, pet }
+    : buildOverview();
+  overview.layout = positionOverlay(overlayWindow, overview);
+  latestOverview = overview;
+  lastPetStateKey = nextPetStateKey;
+  overlayWindow.webContents.send('companion:overview', overview);
+}
+
+function schedulePetAnchorRefresh() {
+  clearTimeout(anchorRefreshTimer);
+  anchorRefreshTimer = setTimeout(refreshPetAnchor, PET_STATE_POLL_MS);
+}
+
+function watchPetAnchor() {
+  petStatePath = path.join(getCodexHome(), '.codex-global-state.json');
+  fs.watchFile(petStatePath, { interval: PET_STATE_POLL_MS }, (current, previous) => {
+    if (current.mtimeMs !== previous.mtimeMs || current.size !== previous.size) {
+      schedulePetAnchorRefresh();
+    }
+  });
+}
+
+function stopWatchingPetAnchor() {
+  if (petStatePath) {
+    fs.unwatchFile(petStatePath);
+    petStatePath = null;
+  }
+  clearTimeout(anchorRefreshTimer);
+  anchorRefreshTimer = null;
 }
 
 function captureTestScreenshot() {
@@ -85,8 +143,14 @@ function captureTestScreenshot() {
   const delay = Number(process.env.PET_COMPANION_SCREENSHOT_DELAY_MS) || 1_200;
   setTimeout(async () => {
     try {
-      if (process.env.PET_COMPANION_SCREENSHOT_VIEW === 'grid') {
+      const screenshotView = process.env.PET_COMPANION_SCREENSHOT_VIEW;
+      if (screenshotView === 'grid' || screenshotView === 'minimized') {
         await overlayWindow.webContents.executeJavaScript("document.querySelector('#view-toggle')?.click()");
+      }
+      if (screenshotView === 'minimized') {
+        await overlayWindow.webContents.executeJavaScript("document.querySelector('#view-toggle')?.click()");
+      }
+      if (screenshotView === 'grid' || screenshotView === 'minimized') {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
       const image = await overlayWindow.webContents.capturePage();
@@ -143,6 +207,7 @@ if (!hasSingleInstanceLock) {
   app.whenReady().then(() => {
     createOverlay();
     updateTimer = setInterval(() => broadcastOverview(), 8_000);
+    watchPetAnchor();
     globalShortcut.register('CommandOrControl+Shift+P', () => {
       if (!overlayWindow) {
         createOverlay();
@@ -195,6 +260,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   globalShortcut.unregisterAll();
   clearInterval(updateTimer);
+  stopWatchingPetAnchor();
 });
 
 app.on('activate', () => {

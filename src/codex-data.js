@@ -305,6 +305,7 @@ module.exports = {
   getCodexHome,
   getOverview,
   parseJsonLines,
+  readPetState,
   readSessionIndex,
   readTaskFromSession,
   selectLatestWorkspaces,

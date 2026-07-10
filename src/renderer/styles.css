@@ -249,6 +249,10 @@ button {
   background: rgba(238, 247, 255, 0.8);
 }
 
+.usage-podium[hidden] {
+  display: none !important;
+}
+
 .podium-header {
   margin-bottom: 11px;
   color: var(--ink);
@@ -382,6 +386,16 @@ button {
   background: rgba(255, 225, 239, 0.9);
   color: var(--pink-deep);
   transform: translateY(-1px);
+}
+
+.lightbulb-btn[data-mode="minimized"] {
+  border-color: rgba(95, 155, 221, 0.6);
+  background: rgba(228, 243, 255, 0.9);
+  color: var(--blue);
+}
+
+.companion.is-minimized .dream-sparkle {
+  opacity: 0.52;
 }
 
 .lightbulb-btn:focus-visible {
