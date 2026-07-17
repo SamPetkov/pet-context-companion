@@ -19,6 +19,6 @@
     "lucide": "^0.468.0"
   },
   "devDependencies": {
-    "electron": "^43.1.0"
+    "electron": "^43.1.1"
   }
 }
